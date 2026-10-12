@@ -39,13 +39,15 @@
 
 ## Keywords (7 boxes)
 
-1. prayer journal for women christian
-2. 90 day devotional for young women
-3. daily prayer guide build habit
-4. guided prayer book for teen girls
-5. christian gifts for women faith
-6. bible verse devotional anxiety peace
-7. womens daily devotional prayer starters
+None of these repeat words from the title or subtitle, which Amazon already searches.
+
+1. bible verse devotional for teen girls and ladies
+2. scripture writing notebook gratitude reflection
+3. faith gifts for her mothers day birthday baptism
+4. quiet time with jesus workbook for beginners
+5. self care book for anxiety peace hope and healing
+6. womens bible study companion church small group
+7. spiritual growth planner answered prayers tracker
 
 ## Categories (choose 3)
 
