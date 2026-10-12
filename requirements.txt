@@ -1,0 +1,4 @@
+reportlab>=4.0
+ebooklib>=0.18
+pillow>=10.0
+epubcheck>=5.0  # optional: validate the EPUB before upload
