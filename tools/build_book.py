@@ -4,6 +4,7 @@ Usage: python3 tools/build_book.py  ->  output/A-Little-Time-with-God.pdf
 Page size 7 x 10 in. Artwork comes from assets/ (see tools/make_art.py).
 """
 import json, math, pathlib, sys
+import numpy as np
 from PIL import Image, ImageOps
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
@@ -53,6 +54,14 @@ def prepare_art():
         p = CACHE / f"bg_{name}.jpg"
         if not p.exists():
             paper(px, color, seed=3, strength=strength, vignette=vig).save(p, quality=90)
+    p = CACHE / "bg_cover.jpg"
+    if not p.exists():
+        bg = np.asarray(paper(px, (244, 210, 204), seed=5, strength=6, vignette=0), np.float32)
+        hgt, wid = bg.shape[:2]
+        yy, xx = np.mgrid[0:hgt, 0:wid].astype(np.float32)
+        glow = np.exp(-(((xx / wid - 0.5) / 0.45) ** 2 + ((yy / hgt - 0.45) / 0.5) ** 2))
+        bg += (glow * 14)[..., None] - ((yy / hgt) * 10)[..., None]
+        Image.fromarray(np.clip(bg, 0, 255).astype(np.uint8)).save(p, quality=92)
     for base in ("bouquet_big", "bouquet_big2", "corner", "corner_small"):
         img = Image.open(ASSETS / f"{base}.png")
         for tag, fn in [("tl", lambda i: i), ("tr", ImageOps.mirror), ("bl", ImageOps.flip),
@@ -269,33 +278,100 @@ class Book:
         self.img(f"{name}_br", W - 4, 4, w=120, anchor="br")
 
     # ---- pages
-    def front_cover(self):
-        self.new_page("pink")
-        self.frame(28)
-        self.img("bouquet_big_tl", -14, H + 14, w=180, anchor="tl")
-        self.img("bouquet_big2_br", W + 14, -14, w=190, anchor="br")
-        self.cross(W / 2, H - 112, 56)
-        self.text("A Little Time", H - 250, "Script", 70, MAUVE)
-        self.text("with", H - 306, "Script", 48, MAUVE)
-        self.gold_text("GOD", W / 2 + 4, H - 405, "CapsM", 104, spacing=6)
-        y = H - 452
-        for s in ["A 90-Day Guided Prayer Journal", "to Build a Consistent Daily Prayer Habit",
-                  "for Young Christian Women"]:
-            self.text(s, y, "Serif", 17, INK)
-            y -= 22
-        y -= 30
+    def front_cover(self, pw=W, ph=H, pad=0):
+        """Front cover built to read at thumbnail size: a cream arch window framed by florals,
+        a big script title, gold GOD and a rose ribbon naming what the book is."""
+        c, s = self.c, pw / W
+        if self.mode != "cover":
+            self.new_page("pink")
+        c.drawImage(str(CACHE / "bg_cover.jpg"), -pad, -pad, pw + 2 * pad, ph + 2 * pad)
+
+        # Arch window.
+        ax0, ax1 = pw * 0.12, pw * 0.88
+        aw, r = ax1 - ax0, (ax1 - ax0) / 2
+        ybot, yc = ph * 0.075, ph * 0.80 - r
+        def arch(inset):
+            p = c.beginPath()
+            p.moveTo(ax0 + inset, ybot + inset)
+            p.lineTo(ax0 + inset, yc)
+            p.arcTo(ax0 + inset, yc - r + inset, ax1 - inset, yc + r - inset, startAng=180, extent=-180)
+            p.lineTo(ax1 - inset, ybot + inset)
+            p.close()
+            return p
+        c.saveState()
+        c.setFillColor(HexColor("#FFFBF6"))
+        c.setFillAlpha(0.94)
+        c.drawPath(arch(0), stroke=0, fill=1)
+        c.restoreState()
+        c.setStrokeColor(GOLD)
+        c.setLineWidth(1.6 * s)
+        c.drawPath(arch(0), stroke=1, fill=0)
+        c.setLineWidth(0.6 * s)
+        c.drawPath(arch(6 * s), stroke=1, fill=0)
+
+        # Florals overlapping the arch's shoulders and base.
+        self.img("bouquet_big_tl", -pw * 0.05, ph + ph * 0.02, w=pw * 0.46, anchor="tl")
+        self.img("corner_tr", pw + pw * 0.01, ph + ph * 0.01, w=pw * 0.28, anchor="tr")
+        self.img("bouquet_big2_br", pw + pw * 0.06, -ph * 0.03, w=pw * 0.42, anchor="br")
+        self.img("corner_bl", -pw * 0.01, -ph * 0.01, w=pw * 0.26)
+
+        # Gold sparkles.
+        import random
+        rng = random.Random(9)
+        for _ in range(26):
+            x, y = rng.uniform(0.04, 0.96) * pw, rng.uniform(0.05, 0.95) * ph
+            if ax0 - 6 < x < ax1 + 6 and ybot < y < yc + r:
+                continue
+            self.diamond(x, y, rng.uniform(1.2, 2.6) * s, GOLD_LIGHT if rng.random() < 0.5 else GOLD)
+
+        # Title block, centred inside the arch.
+        fit = lambda txt, font, size, width: min(size, size * width / pdfmetrics.stringWidth(txt, font, size))
+        t1 = fit("A Little Time", "Script", 66 * s, aw * 0.9)
+        god = fit("GOD", "CapsM", 112 * s, aw * 0.74)
+        rib = "90-DAY GUIDED PRAYER JOURNAL"
+        rs = fit(rib, "CapsM", 12.5 * s, aw * 0.86)
+        top = yc + r
+        block = (34 + 40 + 42 + 44 + 34 + 21) * s + t1 * 0.95 + god * 0.86
+        room = top - (ybot + 50 * s)
+        y = top - max(34 * s, (room - block) / 2)
+        self.cross(pw / 2, y, 40 * s)
+        y -= 40 * s + t1 * 0.95
+        self.text("A Little Time", y, "Script", t1, MAUVE, pw / 2)
+        y -= 42 * s
+        self.text("with", y, "Script", 40 * s, MAUVE, pw / 2)
+        y -= god * 0.86
+        self.gold_text("GOD", pw / 2 + 3 * s, y, "CapsM", god, spacing=5 * s)
+        # Rose ribbon with notched ends, wider than the arch.
+        y -= 44 * s
+        rh, rw = 30 * s, aw * 1.08
+        rx = pw / 2 - rw / 2
+        c.setFillColor(HexColor("#B9707C"))
+        p = c.beginPath()
+        notch = 10 * s
+        p.moveTo(rx, y); p.lineTo(rx + rw, y); p.lineTo(rx + rw - notch, y + rh / 2); p.lineTo(rx + rw, y + rh)
+        p.lineTo(rx, y + rh); p.lineTo(rx + notch, y + rh / 2); p.close()
+        c.drawPath(p, stroke=0, fill=1)
+        c.setStrokeColor(GOLD_LIGHT)
+        c.setLineWidth(0.6 * s)
+        c.line(rx + notch * 1.6, y + 3.5 * s, rx + rw - notch * 1.6, y + 3.5 * s)
+        c.line(rx + notch * 1.6, y + rh - 3.5 * s, rx + rw - notch * 1.6, y + rh - 3.5 * s)
+        self.text(rib, y + rh / 2 - rs * 0.36, "CapsM", rs, HexColor("#FFF8F2"), pw / 2, spacing=1.2 * s)
+        y -= 34 * s
+        self.text("to Build a Consistent Daily Prayer Habit", y, "SerifI", 16.5 * s, INK, pw / 2)
+        y -= 21 * s
+        self.text("for Young Christian Women", y, "SerifI", 16.5 * s, INK, pw / 2)
+        y -= 30 * s
         parts = ["PRAY", "GROW", "WALK CLOSER"]
-        widths = [pdfmetrics.stringWidth(p, "Caps", 9) + 1.8 * (len(p) - 1) for p in parts]
-        total = sum(widths) + 2 * 26
-        x = W / 2 - total / 2
-        for i, (p, w) in enumerate(zip(parts, widths)):
-            self.text(p, y, "Caps", 9, SOFT, x, "left", spacing=1.8)
-            x += w
+        ts = 8.5 * s
+        widths = [pdfmetrics.stringWidth(q, "Caps", ts) + 1.8 * s * (len(q) - 1) for q in parts]
+        x = pw / 2 - (sum(widths) + 2 * 24 * s) / 2
+        for i, (q, wd) in enumerate(zip(parts, widths)):
+            self.text(q, y, "Caps", ts, SOFT, x, "left", spacing=1.8 * s)
+            x += wd
             if i < 2:
-                self.diamond(x + 13, y + 3)
-                x += 26
-        self.heart(W / 2, y - 26, 4.5)
-        self.text(BRAND, y - 58, "Pinyon", 20, MAUVE)
+                self.diamond(x + 12 * s, y + 3 * s, 2.4 * s)
+                x += 24 * s
+        self.text(BRAND, ybot + 20 * s, "Pinyon", 19 * s, MAUVE, pw / 2)
 
     def belongs_page(self):
         self.new_page()
@@ -580,7 +656,7 @@ class Book:
         self.heart(W / 2, y - 250, 4.5)
 
     def back_cover(self):
-        self.new_page("pink")
+        self.new_page("cover")
         self.frame(28)
         self.img("corner_tr", W - 4, H - 4, w=125, anchor="tr")
         self.img("bouquet_big_bl", -12, -12, w=170)
@@ -643,9 +719,9 @@ def build_kdp_cover(path, pages, paper="cream"):
     b = Book(path, mode="cover")
     c = b.c
     c.setPageSize((cw, ch))
-    c.drawImage(str(CACHE / "bg_pink.jpg"), 0, 0, cw, ch)
+    c.drawImage(str(CACHE / "bg_cover.jpg"), 0, 0, cw, ch)
     for x0, clip_x, clip_w, draw in [(BL, 0, BL + W, b.back_cover),
-                                     (BL + W + spine, BL + W + spine, W + BL, b.front_cover)]:
+                                     (BL + W + spine, BL + W + spine, W + BL, lambda: b.front_cover(pad=BL))]:
         c.saveState()
         p = c.beginPath()
         p.rect(clip_x, 0, clip_w, ch)
@@ -666,6 +742,21 @@ def build_kdp_cover(path, pages, paper="cream"):
     return cw / 72, ch / 72, spine / 72
 
 
+def build_kindle_cover(path_jpg):
+    """Kindle eBook cover: 1600 x 2560 px JPG (KDP's recommended size)."""
+    import subprocess, tempfile
+    pw, ph = 480, 768
+    tmp = pathlib.Path(tempfile.mkdtemp()) / "kindle.pdf"
+    b = Book(tmp, mode="cover")
+    b.c.setPageSize((pw, ph))
+    b.front_cover(pw, ph)
+    b.c.showPage()
+    b.c.save()
+    subprocess.run(["pdftoppm", "-singlefile", "-png", "-scale-to-x", "1600", "-scale-to-y", "2560",
+                    str(tmp), str(tmp.with_suffix(""))], check=True)
+    Image.open(tmp.with_suffix(".png")).convert("RGB").save(path_jpg, quality=93)
+
+
 if __name__ == "__main__":
     prepare_art()
     out = ROOT / "output"
@@ -683,3 +774,6 @@ if __name__ == "__main__":
     path = kdp / "A-Little-Time-with-God_KDP-cover.pdf"
     w, h, sp = build_kdp_cover(path, pages)
     print(f"{path.relative_to(ROOT)}: {w:.3f} x {h:.3f} in, spine {sp:.3f} in")
+    path = out / "A-Little-Time-with-God_cover-1600x2560.jpg"
+    build_kindle_cover(path)
+    print(path.relative_to(ROOT))
