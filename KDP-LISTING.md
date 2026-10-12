@@ -60,3 +60,33 @@ None of these repeat words from the title or subtitle, which Amazon already sear
 - **Language:** English · **Primary audience:** adults (not sexually explicit)
 - **AI-generated content:** KDP asks whether text or images were AI-generated. This book's text and artwork were made with AI help, so answer **Yes**.
 - **Paperback:** 7×10, cream paper, matte cover. $7.99–$9.99 is typical for a 120-page journal.
+
+---
+
+# Kindle eBook edition (devotional)
+
+Upload in **Kindle eBook Content**: manuscript `output/Kindle-ebook/A-Little-Time-with-God_Kindle.epub`, cover `output/Kindle-ebook/A-Little-Time-with-God_Kindle-cover.jpg`.
+
+- **Title:** A Little Time with God
+- **Subtitle:** A 90-Day Devotional and Prayer Guide for Young Christian Women
+- **Author:** digiByDK
+- **Price:** $2.99–$4.99 (70% royalty). Consider KDP Select / Kindle Unlimited.
+
+```html
+<b>You don't need perfect words. You just need a place to begin.</b>
+
+<p><i>A Little Time with God</i> is a 90-day devotional for young Christian women who want to pray more consistently and feel closer to God, in just ten minutes a day.</p>
+
+<p><b>Every day includes:</b></p>
+<ul>
+<li>A Bible verse chosen for real life</li>
+<li>A short, heartfelt devotional thought</li>
+<li>A reflection question to answer in your notebook</li>
+<li>A prayer to help you begin when you don't know what to say</li>
+<li>A gratitude prompt</li>
+</ul>
+
+<p>Over 13 weekly themes, including trust, peace for an anxious heart, who God says you are, forgiveness, waiting, strength for hard days and rest, you'll build a prayer habit that lasts.</p>
+
+<p><b>Because a stronger prayer life leads to a closer relationship with God.</b> Start your 90 days today.</p>
+```

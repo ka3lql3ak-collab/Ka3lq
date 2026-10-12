@@ -278,7 +278,8 @@ class Book:
         self.img(f"{name}_br", W - 4, 4, w=120, anchor="br")
 
     # ---- pages
-    def front_cover(self, pw=W, ph=H, pad=0):
+    def front_cover(self, pw=W, ph=H, pad=0, ribbon="90-DAY GUIDED PRAYER JOURNAL",
+                    lines=("to Build a Consistent Daily Prayer Habit", "for Young Christian Women")):
         """Front cover built to read at thumbnail size: a cream arch window framed by florals,
         a big script title, gold GOD and a rose ribbon naming what the book is."""
         c, s = self.c, pw / W
@@ -328,7 +329,7 @@ class Book:
         fit = lambda txt, font, size, width: min(size, size * width / pdfmetrics.stringWidth(txt, font, size))
         t1 = fit("A Little Time", "Script", 66 * s, aw * 0.9)
         god = fit("GOD", "CapsM", 112 * s, aw * 0.74)
-        rib = "90-DAY GUIDED PRAYER JOURNAL"
+        rib = ribbon
         rs = fit(rib, "CapsM", 12.5 * s, aw * 0.86)
         top = yc + r
         block = (34 + 40 + 42 + 44 + 34 + 21) * s + t1 * 0.95 + god * 0.86
@@ -357,9 +358,9 @@ class Book:
         c.line(rx + notch * 1.6, y + rh - 3.5 * s, rx + rw - notch * 1.6, y + rh - 3.5 * s)
         self.text(rib, y + rh / 2 - rs * 0.36, "CapsM", rs, HexColor("#FFF8F2"), pw / 2, spacing=1.2 * s)
         y -= 34 * s
-        self.text("to Build a Consistent Daily Prayer Habit", y, "SerifI", 16.5 * s, INK, pw / 2)
+        self.text(lines[0], y, "SerifI", 16.5 * s, INK, pw / 2)
         y -= 21 * s
-        self.text("for Young Christian Women", y, "SerifI", 16.5 * s, INK, pw / 2)
+        self.text(lines[1], y, "SerifI", 16.5 * s, INK, pw / 2)
         y -= 30 * s
         parts = ["PRAY", "GROW", "WALK CLOSER"]
         ts = 8.5 * s
@@ -742,14 +743,14 @@ def build_kdp_cover(path, pages, paper="cream"):
     return cw / 72, ch / 72, spine / 72
 
 
-def build_kindle_cover(path_jpg):
+def build_kindle_cover(path_jpg, **cover_text):
     """Kindle eBook cover: 1600 x 2560 px JPG (KDP's recommended size)."""
     import subprocess, tempfile
     pw, ph = 480, 768
     tmp = pathlib.Path(tempfile.mkdtemp()) / "kindle.pdf"
     b = Book(tmp, mode="cover")
     b.c.setPageSize((pw, ph))
-    b.front_cover(pw, ph)
+    b.front_cover(pw, ph, **cover_text)
     b.c.showPage()
     b.c.save()
     subprocess.run(["pdftoppm", "-singlefile", "-png", "-scale-to-x", "1600", "-scale-to-y", "2560",
@@ -776,4 +777,10 @@ if __name__ == "__main__":
     print(f"{path.relative_to(ROOT)}: {w:.3f} x {h:.3f} in, spine {sp:.3f} in")
     path = out / "A-Little-Time-with-God_cover-1600x2560.jpg"
     build_kindle_cover(path)
+    print(path.relative_to(ROOT))
+    kindle = out / "Kindle-ebook"
+    kindle.mkdir(exist_ok=True)
+    path = kindle / "A-Little-Time-with-God_Kindle-cover.jpg"
+    build_kindle_cover(path, ribbon="90-DAY DEVOTIONAL & PRAYER GUIDE",
+                       lines=("Daily Scripture, Reflections & Prayers", "for Young Christian Women"))
     print(path.relative_to(ROOT))
