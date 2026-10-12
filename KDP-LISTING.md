@@ -4,7 +4,7 @@
 
 - **Title:** A Little Time with God
 - **Subtitle:** A 90-Day Guided Prayer Journal to Build a Consistent Daily Prayer Habit for Young Christian Women
-- **Author:** *(your pen name; also update `AUTHOR` in `content/book.py` and rebuild)*
+- **Author:** *(your pen name)*
 
 ## Description (paste into KDP's description box)
 
@@ -48,6 +48,5 @@
 ## Settings
 
 - **Language:** English · **Primary audience:** adults (not sexually explicit)
-- **AI-generated content:** KDP asks whether text or images were AI-generated. This draft's text was AI-generated, so answer **Yes**, even after you edit it.
-- **Pricing:** $2.99–$4.99 for the ebook gets the 70% royalty. Consider enrolling in KDP Select (Kindle Unlimited).
-- **Paperback (optional):** 6×9, cream paper, no bleed, matte cover. $7.99–$9.99 is typical for a 120-page journal.
+- **AI-generated content:** KDP asks whether text or images were AI-generated. This book's text and artwork were made with AI help, so answer **Yes**.
+- **Paperback:** 7×10, cream paper, matte cover. $7.99–$9.99 is typical for a 120-page journal.

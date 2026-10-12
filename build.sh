@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Rebuild every KDP file into output/.
+# Rebuild the complete 120-page journal PDF into output/.
+# (tools/make_art.py re-paints the florals in assets/; it is slow and only needed to change the artwork.)
 set -euo pipefail
 cd "$(dirname "$0")"
-python3 tools/build_cover.py
-python3 tools/build_epub.py
-python3 tools/build_pdf.py
+python3 tools/build_book.py
