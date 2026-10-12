@@ -4,27 +4,35 @@
 
 - **Title:** A Little Time with God
 - **Subtitle:** A 90-Day Guided Prayer Journal to Build a Consistent Daily Prayer Habit for Young Christian Women
-- **Author:** *(your pen name)*
+- **Author:** digiByDK *(or your own pen name)*
 
 ## Description (paste into KDP's description box)
 
 ```html
 <b>You don't need perfect words. You just need a place to begin.</b>
 
-<p>A Little Time with God is a 90-day guided prayer journey for young Christian women who want to pray more consistently, without guilt and without a complicated plan. Ten minutes a day is all it takes.</p>
+<p><i>A Little Time with God</i> is a beautiful 90-day guided prayer journal for women who want to pray more consistently and grow closer to God, one simple step at a time. All it takes is ten minutes a day.</p>
 
-<p><b>Each day includes:</b></p>
+<p><b>Every daily page gives you:</b></p>
 <ul>
-<li>A hand-picked Bible verse</li>
-<li>A short, heartfelt reflection for real life</li>
-<li>A reflection question to answer honestly</li>
-<li>A prayer starter for when you don't know what to say</li>
-<li>A gratitude prompt</li>
+<li>A Bible verse to read and reflect on</li>
+<li>A reflection question to answer in your own words</li>
+<li>Space to write your prayer, as naturally as you would speak</li>
+<li>A place to record one thing you're grateful for</li>
+<li>A quick check-in: Did I pray today? How long? What got in the way?</li>
 </ul>
 
-<p><b>Also inside:</b> a prayer-routine planner, weekly habit reviews, encouragement for the days you miss, answered-prayer reflections, and a plan for your next 30 days.</p>
+<p><b>Also inside:</b></p>
+<ul>
+<li>My Prayer Routine planner</li>
+<li>90-Day Prayer Tracker</li>
+<li>Prayer lists for the people, situations and intentions on your heart</li>
+<li>12 Weekly Habit Reviews</li>
+<li>"When I Miss a Day" pages for grace-filled fresh starts</li>
+<li>Answered Prayer Reflections, a Next 30 Days plan, and notes pages</li>
+</ul>
 
-<p>Over 13 weekly themes, including trust, peace for an anxious heart, who God says you are, gratitude, forgiveness, waiting, strength for hard days, and rest, you'll build a prayer habit that lasts and a closer walk with God.</p>
+<p>Designed with soft blush watercolor florals and gold accents, 120 pages and 7 x 10 inches, with plenty of room to write. A meaningful gift for birthdays, Mother's Day, Christmas, baptisms, Bible study groups, or simply for yourself.</p>
 
 <p><b>Because a stronger prayer life leads to a closer relationship with God.</b> Start your 90 days today.</p>
 ```
