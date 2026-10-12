@@ -20,6 +20,9 @@ VERSES = json.load(open(ROOT / "data/verses.json"))
 ASSETS = ROOT / "assets"
 CACHE = ROOT / "build"
 
+BRAND = "digiByDK"
+YEAR = 2026
+
 W, H = 7 * 72, 10 * 72
 M, TOP, BOT = 50, 54, 48            # side, top and bottom margins
 
@@ -64,18 +67,38 @@ def art(name):
 
 # ---------------------------------------------------------------- book
 class Book:
-    def __init__(self, path):
+    def __init__(self, path, preview=False):
         self.c = canvas.Canvas(str(path), pagesize=(W, H))
         self.c.setTitle("A Little Time with God")
+        self.c.setAuthor(BRAND)
         self.c.setSubject("A 90-Day Guided Prayer Journal to Build a Consistent Daily Prayer Habit "
                           "for Young Christian Women")
-        self.c.setCreator("A Little Time with God")
+        self.c.setCreator(BRAND)
+        self.c.setKeywords([BRAND, f"Copyright {YEAR} {BRAND}. All rights reserved."])
         self.page = 0
+        self.preview = preview
 
     # ---- primitives
+    def finish_page(self):
+        """Brand mark on every page; the preview edition also gets a large diagonal watermark."""
+        c = self.c
+        if self.page > 1:
+            self.text(f"© {YEAR} {BRAND}", 16, "Serif", 7.5, SOFT)
+        if self.preview:
+            c.saveState()
+            c.setFillColor(MAUVE)
+            c.setFillAlpha(0.13)
+            c.setFont("SerifB", 54)
+            c.translate(W / 2, H / 2)
+            c.rotate(35)
+            for row in range(-4, 5):
+                c.drawCentredString((row % 2) * 120, row * 120, f"{BRAND}  ·  preview")
+            c.restoreState()
+        c.showPage()
+
     def new_page(self, bg="cream"):
         if self.page:
-            self.c.showPage()
+            self.finish_page()
         self.page += 1
         self.c.drawImage(str(CACHE / f"bg_{bg}.jpg"), 0, 0, W, H)
 
@@ -257,6 +280,7 @@ class Book:
                 self.diamond(x + 13, y + 3)
                 x += 26
         self.heart(W / 2, y - 26, 4.5)
+        self.text(BRAND, y - 58, "Pinyon", 20, MAUVE)
 
     def belongs_page(self):
         self.new_page()
@@ -273,7 +297,13 @@ class Book:
         self.divider(y - 160)
         self.para("“Draw near to God, and he will draw near to you.”", y - 196, "SerifI", 15, 19, INK)
         self.text("JAMES 4:8", y - 218, "Caps", 8, GOLD, spacing=1.6)
-        self.text("Scripture quotations are from the World English Bible (public domain).", y - 250, "BodyI", 7.5, SOFT)
+        y -= 250
+        for s in [f"© {YEAR} {BRAND}. All rights reserved.",
+                  "For personal use only. This journal may not be copied, shared, resold or",
+                  "redistributed, in whole or in part, without written permission from " + BRAND + ".",
+                  "Scripture quotations are from the World English Bible (public domain)."]:
+            self.text(s, y, "BodyI", 7.5, SOFT)
+            y -= 11
 
     def welcome_page(self):
         self.new_page()
@@ -584,7 +614,7 @@ class Book:
             self.notes_page()
         self.closing_page()
         self.back_cover()
-        self.c.showPage()
+        self.finish_page()
         self.c.save()
         return self.page
 
@@ -593,7 +623,8 @@ if __name__ == "__main__":
     prepare_art()
     out = ROOT / "output"
     out.mkdir(exist_ok=True)
-    path = out / "A-Little-Time-with-God.pdf"
-    n = Book(path).build()
-    print(f"{path.relative_to(ROOT)}: {n} pages")
-    assert n == 120, n
+    for name, preview in [("A-Little-Time-with-God.pdf", False), ("A-Little-Time-with-God_PREVIEW.pdf", True)]:
+        path = out / name
+        n = Book(path, preview).build()
+        print(f"{path.relative_to(ROOT)}: {n} pages")
+        assert n == 120, n

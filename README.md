@@ -2,7 +2,9 @@
 
 *A 90-Day Guided Prayer Journal to Build a Consistent Daily Prayer Habit for Young Christian Women*
 
-**The book:** [`output/A-Little-Time-with-God.pdf`](output/A-Little-Time-with-God.pdf) is one complete PDF, 120 pages, 7 × 10 in, from front cover to back cover.
+**The book:** [`output/A-Little-Time-with-God.pdf`](output/A-Little-Time-with-God.pdf) is one complete PDF, 120 pages, 7 × 10 in, from front cover to back cover. It's branded **© 2026 digiByDK** on every page, with a copyright notice on page 2 and digiByDK as the PDF author.
+
+**Preview copy:** [`output/A-Little-Time-with-God_PREVIEW.pdf`](output/A-Little-Time-with-God_PREVIEW.pdf) is the same book with a large "digiByDK · preview" watermark across every page. Use it for listing images and samples, never as the product.
 
 | Pages | What's there |
 |---|---|
