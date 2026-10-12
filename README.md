@@ -6,6 +6,12 @@
 
 **Preview copy:** [`output/A-Little-Time-with-God_PREVIEW.pdf`](output/A-Little-Time-with-God_PREVIEW.pdf) is the same book with a large "digiByDK · preview" watermark across every page. Use it for listing images and samples, never as the product.
 
+**Amazon KDP paperback:** upload the two files in [`output/KDP-paperback/`](output/KDP-paperback/):
+- `A-Little-Time-with-God_KDP-manuscript.pdf`: the inside pages (118 pages, 7 × 10 in with bleed), for **Manuscript**
+- `A-Little-Time-with-God_KDP-cover.pdf`: back + spine + front in one piece (14.545 × 10.25 in, 0.295 in spine for cream paper), for **Book Cover → Upload a cover you already have**
+
+KDP settings: trim size 7 × 10 in · **cream** paper · black & white interior is cheaper, but use **color** to keep the pink and gold · **bleed** · matte cover · tick **low-content book**.
+
 | Pages | What's there |
 |---|---|
 | 1 | Front cover |

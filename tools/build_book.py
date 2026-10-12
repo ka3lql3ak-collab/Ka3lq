@@ -24,6 +24,7 @@ BRAND = "digiByDK"
 YEAR = 2026
 
 W, H = 7 * 72, 10 * 72
+BL = 9                               # KDP bleed: 0.125 in
 M, TOP, BOT = 50, 54, 48            # side, top and bottom margins
 
 MAUVE = HexColor("#8E5A63")          # titles
@@ -67,8 +68,11 @@ def art(name):
 
 # ---------------------------------------------------------------- book
 class Book:
-    def __init__(self, path, preview=False):
-        self.c = canvas.Canvas(str(path), pagesize=(W, H))
+    def __init__(self, path, preview=False, mode="full"):
+        """mode: "full" (one PDF, covers included), "interior" (KDP manuscript with bleed, no covers)
+        or "cover" (pages drawn into panels of a KDP wraparound cover)."""
+        self.mode = mode
+        self.c = canvas.Canvas(str(path), pagesize=(W + BL, H + 2 * BL) if mode == "interior" else (W, H))
         self.c.setTitle("A Little Time with God")
         self.c.setAuthor(BRAND)
         self.c.setSubject("A 90-Day Guided Prayer Journal to Build a Consistent Daily Prayer Habit "
@@ -76,14 +80,15 @@ class Book:
         self.c.setCreator(BRAND)
         self.c.setKeywords([BRAND, f"Copyright {YEAR} {BRAND}. All rights reserved."])
         self.page = 0
+        self.framed = False
         self.preview = preview
 
     # ---- primitives
     def finish_page(self):
         """Brand mark on every page; the preview edition also gets a large diagonal watermark."""
         c = self.c
-        if self.page > 1:
-            self.text(f"© {YEAR} {BRAND}", 16, "Serif", 7.5, SOFT)
+        if self.page > 1 or self.mode == "interior":
+            self.text(f"© {YEAR} {BRAND}", 44 if self.framed else 32, "Serif", 7.5, SOFT)
         if self.preview:
             c.saveState()
             c.setFillColor(MAUVE)
@@ -97,10 +102,19 @@ class Book:
         c.showPage()
 
     def new_page(self, bg="cream"):
+        if self.mode == "cover":
+            return
         if self.page:
             self.finish_page()
         self.page += 1
-        self.c.drawImage(str(CACHE / f"bg_{bg}.jpg"), 0, 0, W, H)
+        self.framed = False
+        if self.mode == "interior":
+            # Bleed sits on the outside edge: right of odd (right-hand) pages, left of even ones.
+            self.c.setPageSize((W + BL, H + 2 * BL))
+            self.c.translate(0 if self.page % 2 else BL, BL)
+            self.c.drawImage(str(CACHE / f"bg_{bg}.jpg"), -BL, -BL, W + 2 * BL, H + 2 * BL)
+        else:
+            self.c.drawImage(str(CACHE / f"bg_{bg}.jpg"), 0, 0, W, H)
 
     def img(self, name, x, y, w=None, h=None, anchor="bl"):
         path = art(name)
@@ -205,7 +219,8 @@ class Book:
         self.c.line(W / 2 + 12, y, W / 2 + half, y)
         self.heart(W / 2, y, 4)
 
-    def frame(self, inset=24):
+    def frame(self, inset=30):
+        self.framed = True
         c = self.c
         c.setStrokeColor(GOLD)
         c.setLineWidth(1.1)
@@ -594,7 +609,8 @@ class Book:
 
     # ---- assemble
     def build(self):
-        self.front_cover()
+        if self.mode != "interior":
+            self.front_cover()
         self.belongs_page()
         self.welcome_page()
         self.how_to_page()
@@ -613,10 +629,41 @@ class Book:
         for _ in range(3):
             self.notes_page()
         self.closing_page()
-        self.back_cover()
+        if self.mode != "interior":
+            self.back_cover()
         self.finish_page()
         self.c.save()
         return self.page
+
+
+def build_kdp_cover(path, pages, paper="cream"):
+    """KDP paperback wraparound cover: bleed + back + spine + front + bleed."""
+    spine = pages * (0.0025 if paper == "cream" else 0.002252) * 72
+    cw, ch = BL + W + spine + W + BL, H + 2 * BL
+    b = Book(path, mode="cover")
+    c = b.c
+    c.setPageSize((cw, ch))
+    c.drawImage(str(CACHE / "bg_pink.jpg"), 0, 0, cw, ch)
+    for x0, clip_x, clip_w, draw in [(BL, 0, BL + W, b.back_cover),
+                                     (BL + W + spine, BL + W + spine, W + BL, b.front_cover)]:
+        c.saveState()
+        p = c.beginPath()
+        p.rect(clip_x, 0, clip_w, ch)
+        c.clipPath(p, stroke=0, fill=0)
+        c.translate(x0, BL)
+        draw()
+        c.restoreState()
+    # Spine text, reading top to bottom.
+    c.saveState()
+    c.translate(BL + W + spine / 2, ch / 2)
+    c.rotate(-90)
+    c.setFillColor(MAUVE)
+    c.setFont("Serif", 10)
+    c.drawCentredString(0, -3.4, f"A Little Time with God   ·   {BRAND}")
+    c.restoreState()
+    c.showPage()
+    c.save()
+    return cw / 72, ch / 72, spine / 72
 
 
 if __name__ == "__main__":
@@ -628,3 +675,11 @@ if __name__ == "__main__":
         n = Book(path, preview).build()
         print(f"{path.relative_to(ROOT)}: {n} pages")
         assert n == 120, n
+    kdp = out / "KDP-paperback"
+    kdp.mkdir(exist_ok=True)
+    path = kdp / "A-Little-Time-with-God_KDP-manuscript.pdf"
+    pages = Book(path, mode="interior").build()
+    print(f"{path.relative_to(ROOT)}: {pages} pages")
+    path = kdp / "A-Little-Time-with-God_KDP-cover.pdf"
+    w, h, sp = build_kdp_cover(path, pages)
+    print(f"{path.relative_to(ROOT)}: {w:.3f} x {h:.3f} in, spine {sp:.3f} in")
