@@ -163,7 +163,7 @@ export interface SceneSketchInput {
   characters: SketchCharacter[];
 }
 
-export function sceneSvg(sc: SceneSketchInput, W = 540, H = 960) {
+export function sceneSvg(sc: SceneSketchInput, W = 540, H = 960, opts: { clean?: boolean } = {}) {
   const bg = backdrop(`${sc.visual} ${sc.camera}`);
   const cam = sc.camera.toLowerCase();
   const zoom = /extreme close/.test(cam) ? 1.9 : /close/.test(cam) ? 1.45 : /wide|establish/.test(cam) ? 0.7 : 1;
@@ -189,14 +189,14 @@ export function sceneSvg(sc: SceneSketchInput, W = 540, H = 960) {
   <path d="M0 ${groundY} Q ${W / 2} ${groundY - 30} ${W} ${groundY} L ${W} ${H} L 0 ${H} Z" fill="${bg.ground}" opacity="0.9"/>
   ${figs}
   ${labels}
-  <rect x="0" y="${H * 0.66}" width="${W}" height="${H * 0.34}" fill="url(#panel)"/>
+  ${opts.clean ? "" : `<rect x="0" y="${H * 0.66}" width="${W}" height="${H * 0.34}" fill="url(#panel)"/>
   <rect x="18" y="18" rx="10" width="190" height="34" fill="#0b0a10" opacity="0.7"/>
   <text x="32" y="41" font-family="Inter" font-size="17" font-weight="800" fill="#ffb07a">SCENE ${sc.index + 1} · ${esc(sc.beat.toUpperCase())}</text>
   <rect x="${W - 150}" y="18" rx="10" width="132" height="34" fill="#0b0a10" opacity="0.7"/>
   <text x="${W - 84}" y="41" text-anchor="middle" font-family="Inter" font-size="14" font-weight="700" fill="#ffd36a">SKETCH · NOT AI</text>
   ${visLines.map((l, i) => `<text x="28" y="${H * 0.745 + i * 26}" font-family="Inter" font-size="19" fill="#e8e4f0">${esc(l)}</text>`).join("")}
   ${camLines.map((l, i) => `<text x="28" y="${H * 0.745 + visLines.length * 26 + 14 + i * 22}" font-family="Inter" font-size="15" fill="#9fc9ff">${esc(l)}</text>`).join("")}
-  ${sc.caption ? `<text x="${W / 2}" y="${H - 34}" text-anchor="middle" font-family="Inter" font-size="22" font-weight="800" fill="#ffffff">“${esc(sc.caption.slice(0, 40))}”</text>` : ""}
+  ${sc.caption ? `<text x="${W / 2}" y="${H - 34}" text-anchor="middle" font-family="Inter" font-size="22" font-weight="800" fill="#ffffff">“${esc(sc.caption.slice(0, 40))}”</text>` : ""}`}
 </svg>`;
 }
 

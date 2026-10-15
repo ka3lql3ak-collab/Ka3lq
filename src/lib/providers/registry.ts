@@ -54,7 +54,7 @@ const demoVideo: GenProvider = {
     if (!src || !fs.existsSync(src)) {
       if (!p.sketch) throw new ProviderError("Demo clip needs a storyboard image.");
       src = uniqueFile(dir, "png", "demo-src");
-      await rasterize(sceneSvg(p.sketch), src);
+      await rasterize(sceneSvg(p.sketch, 540, 960, { clean: true }), src);
     }
     const out = uniqueFile(dir, "mp4", "demo");
     await renderDemoClip(src, out, Math.max(2, Math.min(9, p.durationSec ?? 5)));

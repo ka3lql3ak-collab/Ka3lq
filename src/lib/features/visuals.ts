@@ -190,7 +190,7 @@ export function requestClip(projectId: string, sceneId: string, o: GenOptions & 
   const board = scene.storyboardAssetId ? getAsset(scene.storyboardAssetId) : null;
   if (plan.mode === "blocked") throw new ValidationError(plan.note ?? "This clip can't be generated yet.");
   let params: Record<string, unknown>;
-  if (plan.mode === "demo") params = { sourceImage: board?.path ?? null, durationSec: scene.durationSec, sketch: sketchInput(scene, cast), mode: "demo" };
+  if (plan.mode === "demo") params = { sourceImage: board && board.provider !== "sketch" ? board.path : null, durationSec: scene.durationSec, sketch: sketchInput(scene, cast), mode: "demo" };
   else if (plan.providerId === "higgsfield-video")
     params = {
       mode: plan.mode,

@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { db } from "./db";
 import { config } from "./config";
+import { VoiceConfigSchema } from "./types";
 
 /**
  * Prices are ESTIMATES, editable in Settings. Luma's pricing page could not be
@@ -61,6 +62,7 @@ export const SettingsSchema = z.object({
     sfxVolume: z.coerce.number().min(0).max(2),
     voiceVolume: z.coerce.number().min(0).max(2),
     fadeInOut: z.boolean(),
+    narrator: VoiceConfigSchema,
   }),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
@@ -79,6 +81,7 @@ export const DEFAULT_SETTINGS: Settings = {
     sfxVolume: 0.8,
     voiceVolume: 1.0,
     fadeInOut: true,
+    narrator: { engine: "flite", voice: "kal16", pitch: 1.0, speed: 0.95, volume: 1 },
   },
 };
 
