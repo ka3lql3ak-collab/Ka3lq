@@ -120,3 +120,26 @@ describe("full render (real FFmpeg)", () => {
     expect(() => render.setRenderApproval(projectId, failed.id, "approved")).toThrow(/finished/);
   });
 });
+
+describe("export (final approval gate)", () => {
+  it("exports only approved FINAL renders, with MP4 + SRT + VTT, labelled when demo", async () => {
+    const { createExport, listExports } = await import("@/lib/exports");
+    const p = repo.listProjects({})[0];
+    const renders = render.listRenders({ projectId: p.id });
+    const final = renders.find((r) => r.quality === "final" && r.status === "done")!;
+    const failed = renders.find((r) => r.status === "failed")!;
+    expect(() => createExport(p.id, failed.id)).toThrow(/hasn't finished/);
+    render.setRenderApproval(p.id, final.id, "pending");
+    expect(() => createExport(p.id, final.id)).toThrow(/Approve the final render/);
+    render.setRenderApproval(p.id, final.id, "approved");
+    const e = createExport(p.id, final.id);
+    expect(e.isDemo).toBe(true);
+    expect(e.url).toMatch(/-DEMO\.mp4$/);
+    expect(e.srtUrl).toMatch(/\.srt/);
+    expect(e.vttUrl).toMatch(/\.vtt/);
+    // Idempotent: exporting again returns the same export.
+    expect(createExport(p.id, final.id).id).toBe(e.id);
+    expect(listExports({}).map((x) => x.id)).toContain(e.id);
+    expect(repo.getProject(p.id)!.status).toBe("exported");
+  });
+});
