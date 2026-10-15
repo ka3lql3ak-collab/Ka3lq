@@ -1,5 +1,6 @@
 import { route } from "@/lib/api";
-import { capabilities } from "@/lib/settings";
+import { capabilities, getSettings } from "@/lib/settings";
+import { keyframeProviderFor, getProvider } from "@/lib/providers/registry";
 import { detectTools } from "@/lib/media/ffmpeg";
 import { db } from "@/lib/db";
 import { committedSpend } from "@/lib/costs";
@@ -21,5 +22,17 @@ export const GET = route(async () => {
               (SELECT COUNT(*) FROM exports) AS exports`,
     )
     .get();
-  return { capabilities: caps, tools, counts, monthSpend: committedSpend({ sinceMs: monthStart.getTime() }) };
+  const s = getSettings();
+  const kf = keyframeProviderFor(s);
+  const preferredVideo = s.video.provider === "higgsfield" ? getProvider("higgsfield-video") : s.video.provider === "luma" ? getProvider("luma-video") : null;
+  return {
+    capabilities: caps,
+    tools,
+    counts,
+    monthSpend: committedSpend({ sinceMs: monthStart.getTime() }),
+    providers: {
+      video: { preferred: s.video.provider, label: preferredVideo?.label ?? "Manual import", configured: preferredVideo?.configured() ?? { ok: false, reason: "Manual mode" } },
+      keyframe: kf ? { id: kf.id, label: kf.label } : null,
+    },
+  };
 });

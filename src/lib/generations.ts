@@ -166,7 +166,10 @@ async function submitGeneration(id: string) {
     }
   } catch (e) {
     if (e instanceof UnknownOutcomeError) {
-      setGen(id, { status: "unknown", error: `${redact(e)} Checking with the provider — it will NOT be resubmitted automatically.`, next_poll_at: now() + 15_000 });
+      const how = provider.reconcile
+        ? "Checking with the provider"
+        : "This provider has no documented way to look the request up, so check your provider dashboard";
+      setGen(id, { status: "unknown", error: `${redact(e)} ${how} — it will NOT be resubmitted automatically. Dismiss it once you've confirmed, then retry manually if needed.`, next_poll_at: provider.reconcile ? now() + 15_000 : now() + 365 * 24 * 3600_000 });
     } else {
       setGen(id, { status: "failed", error: redact(e) });
       if (r.is_paid) ledger({ projectId: r.project_id, generationId: id, provider: r.provider, kind: r.kind, estimated: r.estimated_cost, actual: 0, note: "submission rejected — not charged" });

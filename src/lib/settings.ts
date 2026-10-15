@@ -15,6 +15,11 @@ export const DEFAULT_PRICES = {
   } as Record<string, Record<string, number>>, // USD per 5-second clip
   ninesMultiplier: 1.8, // 9s clip price = 5s price * multiplier
   image: { "photon-1": 0.02, "photon-flash-1": 0.006 } as Record<string, number>,
+  /** Higgsfield Cloud API — UNVERIFIED placeholders (docs unreachable at build time). Edit to match your dashboard. */
+  higgsfield: {
+    video: { "dop-lite": 0.3, "dop-turbo": 0.5, "dop-standard": 0.8 } as Record<string, number>, // USD per generation
+    image: { "720p": 0.05, "1080p": 0.1 } as Record<string, number>, // USD per Soul image
+  },
   storyLlm: 0.25, // per story estimate for a paid LLM (Anthropic); Ollama/local are free
 };
 
@@ -29,15 +34,23 @@ export const SettingsSchema = z.object({
     ninesMultiplier: z.coerce.number().min(1).max(5),
     image: z.record(z.string(), z.coerce.number().min(0)),
     storyLlm: z.coerce.number().min(0),
+    higgsfield: z.object({
+      video: z.record(z.string(), z.coerce.number().min(0)),
+      image: z.record(z.string(), z.coerce.number().min(0)),
+    }),
   }),
   video: z.object({
+    /** Preferred video provider. Never switched silently: if it isn't configured, generation is blocked or demo-only. */
+    provider: z.enum(["higgsfield", "luma", "manual"]),
+    higgsfieldModel: z.enum(["dop-lite", "dop-turbo", "dop-standard"]),
     model: z.enum(["ray-2", "ray-flash-2"]),
     resolution: z.enum(["540p", "720p", "1080p", "4k"]),
     duration: z.enum(["auto", "5s", "9s"]),
   }),
   image: z.object({
-    provider: z.enum(["sketch", "luma"]),
+    provider: z.enum(["sketch", "higgsfield", "luma"]),
     model: z.enum(["photon-1", "photon-flash-1"]),
+    higgsfieldQuality: z.enum(["720p", "1080p"]),
   }),
   render: z.object({
     transition: z.enum(["cut", "crossfade", "fadeblack"]),
@@ -55,8 +68,8 @@ export type Settings = z.infer<typeof SettingsSchema>;
 export const DEFAULT_SETTINGS: Settings = {
   budget: { perSceneUsd: 2, perProjectUsd: 10, monthlyUsd: 25 },
   prices: DEFAULT_PRICES,
-  video: { model: "ray-flash-2", resolution: "720p", duration: "auto" },
-  image: { provider: "sketch", model: "photon-flash-1" },
+  video: { provider: "higgsfield", higgsfieldModel: "dop-turbo", model: "ray-flash-2", resolution: "720p", duration: "auto" },
+  image: { provider: "higgsfield", model: "photon-flash-1", higgsfieldQuality: "1080p" },
   render: {
     transition: "crossfade",
     transitionSec: 0.35,
@@ -99,6 +112,7 @@ function deepMerge<T>(base: T, patch: unknown): T {
 export interface Capabilities {
   demoMode: boolean;
   forceDemo: boolean;
+  higgsfield: boolean;
   luma: boolean;
   publicBaseUrl: boolean;
   anthropic: boolean;
@@ -110,9 +124,12 @@ export interface Capabilities {
 
 export function capabilities(tools?: { ffmpeg: boolean; flite: boolean }): Capabilities {
   const luma = !!config.luma.apiKey;
+  const higgsfield = !!config.higgsfield.credentials;
   return {
-    demoMode: config.forceDemo || !luma,
+    // Demo mode = no real video provider usable. Higgsfield is the preferred provider.
+    demoMode: config.forceDemo || (!higgsfield && !luma),
     forceDemo: config.forceDemo,
+    higgsfield: higgsfield && !config.forceDemo,
     luma: luma && !config.forceDemo,
     publicBaseUrl: !!config.publicBaseUrl,
     anthropic: !!config.anthropic.apiKey && !config.forceDemo,

@@ -3,7 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { capabilities, type Settings } from "../settings";
 import { config } from "../config";
-import { estimateImageCost, estimateVideoCost } from "../costs";
+import { estimateImageCost, estimateVideoCost, estimateHiggsfieldImage, estimateHiggsfieldVideo } from "../costs";
+import { higgsfield, downloadHiggsfieldAsset, type HiggsfieldResponse } from "./higgsfield";
 import { mediaDir, uniqueFile, fromRel } from "../paths";
 import { rasterize, referenceSvg, sceneSvg, type SceneSketchInput, type SketchCharacter } from "../media/sketch";
 import { renderDemoClip } from "../media/demo-clip";
@@ -167,6 +168,118 @@ const lumaVideo: GenProvider = {
   balanceUsd: lumaBalance,
 };
 
+/* ------------------------------- Higgsfield ------------------------------- */
+
+function higgsfieldConfigured() {
+  const c = capabilities();
+  if (c.forceDemo) return { ok: false, reason: "DEMO_MODE=true is set." };
+  if (!config.higgsfield.credentials) return { ok: false, reason: "Set HF_KEY=KEY_ID:KEY_SECRET in .env.local (create an API key at https://cloud.higgsfield.ai — the API needs its own funded balance)." };
+  return { ok: true };
+}
+
+const MIME: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
+
+/** Turn a local or remote image into a URL Higgsfield can read (uploads local files to Higgsfield's CDN). */
+async function higgsfieldImageUrl(remote: string | null | undefined, local: string | null | undefined): Promise<string | null> {
+  if (remote && /^https:\/\//.test(remote)) return remote;
+  if (!local) return null;
+  const abs = fromRel(local);
+  const type = MIME[path.extname(abs).toLowerCase()];
+  if (!type) throw new ProviderError("Keyframe/reference must be a PNG, JPEG or WebP image.");
+  return higgsfield.uploadFile(abs, type);
+}
+
+function higgsfieldPoll(kind: "image" | "video") {
+  return async (gen: GenerationRecord): Promise<PollResult> => {
+    const r: HiggsfieldResponse = await higgsfield.status(gen.providerJobId!);
+    switch (r.status) {
+      case "completed": {
+        const url = kind === "video" ? r.video?.url : r.images?.[0]?.url;
+        return url ? { state: "completed", outputUrl: url } : { state: "failed", error: "Higgsfield reported completion but returned no media URL." };
+      }
+      case "failed":
+        return { state: "failed", error: "Higgsfield reported the generation failed (Higgsfield refunds credits for failed requests)." };
+      case "nsfw":
+        return { state: "failed", error: "Rejected by Higgsfield content moderation (credits refunded). Rephrase the prompt or change the keyframe." };
+      case "canceled":
+        return { state: "failed", error: "The request was cancelled at Higgsfield." };
+      case "in_progress":
+        return { state: "generating" };
+      default:
+        return { state: "queued" };
+    }
+  };
+}
+
+async function higgsfieldCancel(gen: GenerationRecord) {
+  if (!gen.providerJobId) return;
+  try {
+    await higgsfield.cancel(gen.providerJobId);
+  } catch (e) {
+    if ((e as ProviderError).status === 400) throw new ProviderError("Higgsfield only cancels queued requests; this one is already processing and will finish (and be billed).");
+    throw e;
+  }
+}
+
+const higgsfieldImage: GenProvider = {
+  id: "higgsfield-image",
+  label: "Higgsfield Soul (paid)",
+  kind: "image",
+  paid: true,
+  demo: false,
+  configured: higgsfieldConfigured,
+  models: () => [
+    { id: "soul-1080p", label: "Soul · 1080p" },
+    { id: "soul-720p", label: "Soul · 720p (cheaper)" },
+  ],
+  estimate: (s: Settings, model) => estimateHiggsfieldImage(s, model.replace("soul-", "")),
+  async submit(gen) {
+    const p = gen.params as { widthAndHeight?: string; referenceRemote?: string | null; referenceLocal?: string | null; seed?: number };
+    const args: Record<string, unknown> = {
+      prompt: gen.prompt,
+      width_and_height: p.widthAndHeight ?? "1152x2048",
+      quality: gen.model === "soul-720p" ? "720p" : "1080p",
+      batch_size: 1,
+      enhance_prompt: false,
+    };
+    const ref = await higgsfieldImageUrl(p.referenceRemote, p.referenceLocal);
+    if (ref) args.image_reference = { type: "image_url", image_url: ref };
+    if (typeof p.seed === "number") args.seed = p.seed;
+    const r = await higgsfield.submit("/v1/text2image/soul", args);
+    return { providerJobId: r.request_id! };
+  },
+  poll: higgsfieldPoll("image"),
+  cancel: higgsfieldCancel,
+  download: (url, dest) => downloadHiggsfieldAsset(url, dest, "image"),
+};
+
+const higgsfieldVideo: GenProvider = {
+  id: "higgsfield-video",
+  label: "Higgsfield DoP image-to-video (paid)",
+  kind: "video",
+  paid: true,
+  demo: false,
+  configured: higgsfieldConfigured,
+  models: () => [
+    { id: "dop-lite", label: "DoP Lite (basic speed & quality)" },
+    { id: "dop-turbo", label: "DoP Turbo (2× speed, priority queue)" },
+    { id: "dop-standard", label: "DoP Standard (highest quality)" },
+  ],
+  estimate: (s: Settings, model) => estimateHiggsfieldVideo(s, model),
+  async submit(gen) {
+    const p = gen.params as { keyframeRemote?: string | null; keyframeLocal?: string | null; webhookUrl?: string | null; seed?: number };
+    const image = await higgsfieldImageUrl(p.keyframeRemote, p.keyframeLocal);
+    if (!image) throw new ProviderError("Higgsfield DoP needs a keyframe image for this scene.");
+    const args: Record<string, unknown> = { model: gen.model, prompt: gen.prompt, input_images: [{ type: "image_url", image_url: image }], enhance_prompt: false };
+    if (typeof p.seed === "number") args.seed = p.seed;
+    const r = await higgsfield.submit("/v1/image2video/dop", args, p.webhookUrl);
+    return { providerJobId: r.request_id! };
+  },
+  poll: higgsfieldPoll("video"),
+  cancel: higgsfieldCancel,
+  download: (url, dest) => downloadHiggsfieldAsset(url, dest, "video"),
+};
+
 /* -------------------------------- Registry -------------------------------- */
 
 const PROVIDERS: Record<string, GenProvider> = {
@@ -174,6 +287,8 @@ const PROVIDERS: Record<string, GenProvider> = {
   [demoVideo.id]: demoVideo,
   [lumaImage.id]: lumaImage,
   [lumaVideo.id]: lumaVideo,
+  [higgsfieldImage.id]: higgsfieldImage,
+  [higgsfieldVideo.id]: higgsfieldVideo,
 };
 
 /** Test hook: register an extra provider (e.g. a fake paid provider). */
@@ -191,10 +306,27 @@ export function listProviders() {
   return Object.values(PROVIDERS).map((p) => ({ id: p.id, label: p.label, kind: p.kind, paid: p.paid, demo: p.demo, configured: p.configured(), models: p.models() }));
 }
 
-/** The provider used by default for each kind given the current configuration. */
+/**
+ * The provider used by default for each kind. Follows the user's chosen provider and NEVER silently
+ * substitutes another paid provider: if the chosen one isn't configured, only the free demo/sketch
+ * providers are offered (clearly labelled), plus manual import.
+ */
 export function defaultProvider(kind: "image" | "video", s: Settings): GenProvider {
-  if (kind === "video") return lumaVideo.configured().ok ? lumaVideo : demoVideo;
-  return s.image.provider === "luma" && lumaImage.configured().ok ? lumaImage : sketchImage;
+  if (kind === "video") {
+    if (s.video.provider === "higgsfield" && higgsfieldVideo.configured().ok) return higgsfieldVideo;
+    if (s.video.provider === "luma" && lumaVideo.configured().ok) return lumaVideo;
+    return demoVideo;
+  }
+  if (s.image.provider === "higgsfield" && higgsfieldImage.configured().ok) return higgsfieldImage;
+  if (s.image.provider === "luma" && lumaImage.configured().ok) return lumaImage;
+  return sketchImage;
+}
+
+/** Which AI image provider pairs with the chosen video provider (for keyframes). */
+export function keyframeProviderFor(s: Settings): GenProvider | null {
+  if (s.video.provider === "higgsfield") return higgsfieldImage.configured().ok ? higgsfieldImage : null;
+  if (s.video.provider === "luma") return lumaImage.configured().ok ? lumaImage : null;
+  return null;
 }
 
 export function extFor(kind: "image" | "video", url: string) {

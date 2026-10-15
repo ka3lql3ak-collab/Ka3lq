@@ -41,7 +41,7 @@ export default function StoryboardPage() {
   const { id } = useParams<{ id: string }>();
   const { data: proj, reload: reloadProject } = useProject();
   const { data, reload } = useApi<{ scenes: SceneView[] }>(`/api/projects/${id}/scenes`, (d) => (d?.scenes.some((s) => s.imageGen && ACTIVE.includes(s.imageGen.status)) ? 1500 : false));
-  const { data: status } = useApi<{ capabilities: { luma: boolean; demoMode: boolean } }>("/api/status");
+  const { data: status } = useApi<{ capabilities: { demoMode: boolean }; providers: { keyframe: { id: string; label: string } | null; video: { preferred: string; label: string; configured: { ok: boolean; reason?: string } } } }>("/api/status");
   const { data: lib } = useApi<{ characters: CharacterView[] }>("/api/characters");
   const [editing, setEditing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +51,7 @@ export default function StoryboardPage() {
   const toast = useToast();
   const scenes = data?.scenes ?? [];
   const cast = proj?.characters ?? [];
-  const lumaReady = !!status?.capabilities.luma;
+  const ai = status?.providers.keyframe ?? null;
   const missingRefs = cast.filter((c) => !c.approvedImageId);
 
   async function sketchAll(all = false) {
@@ -67,11 +67,11 @@ export default function StoryboardPage() {
       setBusy(null);
     }
   }
-  async function gen(sc: SceneView, providerId: "sketch" | "luma-image") {
+  async function gen(sc: SceneView, providerId: string) {
     setBusy(`${sc.id}:${providerId}`);
     setError(null);
     try {
-      if (providerId === "luma-image" && missingRefs.length) {
+      if (providerId !== "sketch" && missingRefs.length) {
         const ok = await confirm({
           title: "Some characters have no approved reference",
           body: `${missingRefs.map((c) => c.name).join(", ")} will be drawn from text only, so their look may differ between scenes. Approve a reference image in the cast panel first for better consistency.`,
@@ -79,7 +79,7 @@ export default function StoryboardPage() {
         });
         if (!ok) return;
       }
-      await callPaid(`/api/projects/${id}/scenes/${sc.id}/storyboard`, { providerId, requestId: rid() }, confirm, `An AI storyboard frame for scene ${sc.idx + 1}`);
+      await callPaid(`/api/projects/${id}/scenes/${sc.id}/storyboard`, { providerId, requestId: rid() }, confirm, `An AI keyframe for scene ${sc.idx + 1}`);
       reload();
     } catch (e) {
       setError((e as Error).message);
@@ -153,7 +153,7 @@ export default function StoryboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="font-display text-lg font-semibold text-white">Storyboard</div>
-          <div className="text-sm text-ink-400">Check the story visually before paying to animate. Sketches are free; AI frames (Luma Photon) can be used as image-to-video keyframes.</div>
+          <div className="text-sm text-ink-400">Check the story visually before paying to animate. Sketches are free planning aids. {ai ? `AI keyframes (${ai.label}) become the start frame of each animated clip.` : "AI keyframes need your video provider's API configured (Settings)."}</div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => sketchAll(false)} loading={busy === "all"} disabled={scenes.every((s) => s.storyboard)}>Sketch missing (free)</Button>
@@ -164,12 +164,12 @@ export default function StoryboardPage() {
       <ErrorBox error={error} />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         {scenes.map((sc) => (
-          <StoryboardCard key={sc.id} sc={sc} projectId={id} lumaReady={lumaReady} busy={busy} onGen={(p) => gen(sc, p)} onOpen={() => setPreview(sc)} onChanged={reload} />
+          <StoryboardCard key={sc.id} sc={sc} projectId={id} ai={ai} busy={busy} onGen={(p) => gen(sc, p)} onOpen={() => setPreview(sc)} onChanged={reload} />
         ))}
       </div>
 
       <Modal open={!!editing} onClose={() => setEditing(null)} title="Character Bible" wide>
-        {editing && <CharacterEditor id={editing} lumaReady={lumaReady} onSaved={reloadProject} />}
+        {editing && <CharacterEditor id={editing} ai={ai} onSaved={reloadProject} />}
       </Modal>
       <Modal open={!!preview} onClose={() => setPreview(null)} title={preview ? `Scene ${preview.idx + 1} · ${preview.beat}` : ""} wide>
         {preview && (
@@ -193,7 +193,7 @@ export default function StoryboardPage() {
   );
 }
 
-function StoryboardCard({ sc, projectId, lumaReady, busy, onGen, onOpen, onChanged }: { sc: SceneView; projectId: string; lumaReady: boolean; busy: string | null; onGen: (p: "sketch" | "luma-image") => void; onOpen: () => void; onChanged: () => void }) {
+function StoryboardCard({ sc, projectId, ai, busy, onGen, onOpen, onChanged }: { sc: SceneView; projectId: string; ai: { id: string; label: string } | null; busy: string | null; onGen: (p: string) => void; onOpen: () => void; onChanged: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
   const active = sc.imageGen && ACTIVE.includes(sc.imageGen.status);
@@ -232,7 +232,7 @@ function StoryboardCard({ sc, projectId, lumaReady, busy, onGen, onOpen, onChang
         {sc.imageGen?.status === "failed" && <div className="line-clamp-3 text-[11px] text-berry-400" title={sc.imageGen.error ?? ""}>⚠ {sc.imageGen.error}</div>}
         <div className="flex flex-wrap gap-1">
           <Button size="sm" onClick={() => onGen("sketch")} loading={busy === `${sc.id}:sketch`} disabled={!!active}>Sketch</Button>
-          <Button size="sm" variant="primary" onClick={() => onGen("luma-image")} loading={busy === `${sc.id}:luma-image`} disabled={!lumaReady || !!active} title={lumaReady ? "Paid — you'll confirm the cost first" : "Requires LUMA_API_KEY"}>
+          <Button size="sm" variant="primary" onClick={() => ai && onGen(ai.id)} loading={!!ai && busy === `${sc.id}:${ai.id}`} disabled={!ai || !!active} title={ai ? `${ai.label} — you'll confirm the cost first` : "Configure your video provider's API in Settings"}>
             AI $
           </Button>
           <Button size="sm" variant="ghost" onClick={() => fileRef.current?.click()} title="Upload your own keyframe image">⇪</Button>

@@ -6,7 +6,7 @@ import { cx, Badge } from "./ui";
 import { useApi, money } from "@/lib/client";
 
 interface Status {
-  capabilities: { demoMode: boolean; luma: boolean; anthropic: boolean; openaiCompat: boolean; flite: boolean; ffmpeg: boolean };
+  capabilities: { demoMode: boolean; higgsfield: boolean; luma: boolean; anthropic: boolean; openaiCompat: boolean; flite: boolean; ffmpeg: boolean };
   counts: { activeJobs: number; activeGenerations: number };
   monthSpend: number;
 }
@@ -110,7 +110,7 @@ export function Sidebar() {
             <>
               <div className="flex items-center justify-between">
                 <span className="text-ink-500">Mode</span>
-                {data.capabilities.demoMode ? <Badge tone="demo">Demo mode</Badge> : <Badge tone="approved">Live · Luma</Badge>}
+                {data.capabilities.demoMode ? <Badge tone="demo">Demo mode</Badge> : <Badge tone="approved">Live · {data.capabilities.higgsfield ? "Higgsfield" : "Luma"}</Badge>}
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-ink-500">Spent this month</span>

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { route, readJson } from "@/lib/api";
-import { planClip, requestClip } from "@/lib/features/visuals";
+import { clipPrompt, planClip, requestClip } from "@/lib/features/visuals";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ const Schema = Opts.extend({ requestId: z.string(), confirmCost: z.boolean().opt
 export const GET = route<{ id: string; sceneId: string }>(async (req, { id, sceneId }) => {
   const q = Object.fromEntries(new URL(req.url).searchParams);
   const o = Opts.parse({ ...q, useKeyframe: q.useKeyframe === undefined ? undefined : q.useKeyframe !== "false" });
-  return { plan: planClip(id, sceneId, o) };
+  return { plan: planClip(id, sceneId, o), prompt: clipPrompt(id, sceneId) };
 });
 
 export const POST = route<{ id: string; sceneId: string }>(async (req, { id, sceneId }) => requestClip(id, sceneId, Schema.parse(await readJson(req))));

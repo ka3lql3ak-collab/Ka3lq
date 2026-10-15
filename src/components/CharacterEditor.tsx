@@ -36,7 +36,7 @@ const FLITE = [
   ["rms", "Male, deep (rms)"],
 ];
 
-export function CharacterEditor({ id, onSaved, lumaReady }: { id: string; onSaved?: () => void; lumaReady?: boolean }) {
+export function CharacterEditor({ id, onSaved, ai }: { id: string; onSaved?: () => void; ai?: { id: string; label: string } | null }) {
   const { data, reload, error } = useApi<Detail>(`/api/characters/${id}`, (d) => (d?.generations.some((g) => ["queued", "submitting", "submitted", "generating"].includes(g.status)) ? 2000 : false));
   const [draft, setDraft] = useState<CharacterView | null>(null);
   const [saving, setSaving] = useState(false);
@@ -70,7 +70,7 @@ export function CharacterEditor({ id, onSaved, lumaReady }: { id: string; onSave
       setSaving(false);
     }
   }
-  async function generate(providerId: "sketch" | "luma-image") {
+  async function generate(providerId: string) {
     setBusy(providerId);
     setErr(null);
     try {
@@ -148,8 +148,8 @@ export function CharacterEditor({ id, onSaved, lumaReady }: { id: string; onSave
         {failed && <ErrorBox error={`Last generation failed: ${failed.error}`} />}
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => generate("sketch")} loading={busy === "sketch"}>Sketch reference (free)</Button>
-          <Button variant="primary" onClick={() => generate("luma-image")} loading={busy === "luma-image"} disabled={!lumaReady} title={lumaReady ? "" : "Requires LUMA_API_KEY"}>
-            AI reference · Luma Photon
+          <Button variant="primary" onClick={() => ai && generate(ai.id)} loading={!!ai && busy === ai.id} disabled={!ai} title={ai ? "Paid — you'll confirm the cost first" : "Configure your video provider's API in Settings"}>
+            AI reference{ai ? ` · ${ai.label.replace(" (paid)", "")}` : ""}
           </Button>
           <Button variant="ghost" onClick={() => fileRef.current?.click()} loading={busy === "upload"}>Upload image</Button>
           <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />

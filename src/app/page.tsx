@@ -7,7 +7,7 @@ import { Button, Card, Notice, PageHeader } from "@/components/ui";
 import { ProjectLibrary } from "@/components/ProjectLibrary";
 
 interface Status {
-  capabilities: { demoMode: boolean; forceDemo: boolean; luma: boolean; anthropic: boolean; openaiCompat: boolean; flite: boolean; ffmpeg: boolean; piper: boolean };
+  capabilities: { demoMode: boolean; forceDemo: boolean; higgsfield: boolean; luma: boolean; anthropic: boolean; openaiCompat: boolean; flite: boolean; ffmpeg: boolean; piper: boolean };
   counts: { projects: number; characters: number; activeJobs: number; activeGenerations: number; exports: number };
   monthSpend: number;
 }
@@ -38,8 +38,8 @@ export default function Dashboard() {
 
       {caps?.demoMode && (
         <Notice tone="demo" className="mb-6">
-          <b>Demo mode.</b> {caps.forceDemo ? "DEMO_MODE=true is set." : "No LUMA_API_KEY is configured."} Stories, storyboards, voices, captions and rendering all work for free. Video clips are
-          <b> local placeholder animations of your storyboard</b>, watermarked “DEMO — not AI video”. They are never presented as AI-generated. <Link href="/settings" className="underline">Configure Luma →</Link>
+          <b>Demo mode.</b> {caps.forceDemo ? "DEMO_MODE=true is set." : "The Higgsfield API isn't configured yet (HF_KEY)."} Stories, storyboards, voices, captions and rendering all work for free. You can generate clips in the Higgsfield app and import them per scene, or make
+          <b> local placeholder animations of your storyboard</b>, watermarked “DEMO — not AI video”, which are never presented as AI-generated. <Link href="/settings" className="underline">Set up Higgsfield →</Link>
         </Notice>
       )}
 
@@ -91,7 +91,7 @@ export default function Dashboard() {
           <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <Svc ok={caps.ffmpeg} name="FFmpeg rendering" detail={caps.ffmpeg ? "Installed" : "Install FFmpeg"} />
             <Svc ok={caps.flite} name="Local voices (flite)" detail={caps.flite ? "Free, built into FFmpeg" : "FFmpeg lacks libflite"} />
-            <Svc ok={caps.luma} name="Luma video & images" detail={caps.luma ? "Configured (paid)" : "Needs LUMA_API_KEY"} />
+            <Svc ok={caps.higgsfield} name="Higgsfield video (preferred)" detail={caps.higgsfield ? "API configured (paid)" : "Needs HF_KEY · or import from the app"} />
             <Svc ok={caps.anthropic || caps.openaiCompat} optional name="LLM story writer" detail={caps.anthropic ? "Anthropic" : caps.openaiCompat ? "OpenAI-compatible" : "Optional — local composer in use"} />
           </div>
         </Card>

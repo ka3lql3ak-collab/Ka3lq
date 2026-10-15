@@ -25,6 +25,19 @@ export const config = {
       return env("LUMA_BASE_URL") ?? "https://api.lumalabs.ai/dream-machine/v1";
     },
   },
+  higgsfield: {
+    /** "KEY_ID:KEY_SECRET" from https://cloud.higgsfield.ai (same env names as the official SDKs). */
+    get credentials() {
+      const single = env("HF_KEY") ?? env("HF_CREDENTIALS");
+      if (single) return single.includes(":") ? single : undefined;
+      const id = env("HF_API_KEY");
+      const secret = env("HF_API_SECRET");
+      return id && secret ? `${id}:${secret}` : undefined;
+    },
+    get baseUrl() {
+      return env("HF_BASE_URL") ?? "https://api.higgsfield.ai";
+    },
+  },
   get publicBaseUrl() {
     return env("PUBLIC_BASE_URL")?.replace(/\/+$/, "");
   },
@@ -59,7 +72,8 @@ export const config = {
 
 /** Values that must never appear in logs or API responses. */
 export function secretValues(): string[] {
-  return [config.luma.apiKey, config.anthropic.apiKey, config.openaiCompat.apiKey].filter(
+  const hf = config.higgsfield.credentials;
+  return [config.luma.apiKey, config.anthropic.apiKey, config.openaiCompat.apiKey, hf, ...(hf ? hf.split(":") : [])].filter(
     (v): v is string => !!v && v.length >= 6,
   );
 }

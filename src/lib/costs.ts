@@ -15,6 +15,18 @@ export function estimateImageCost(s: Settings, model: string): number {
   return round2(p);
 }
 
+export function estimateHiggsfieldVideo(s: Settings, model: string): number {
+  const p = s.prices.higgsfield.video[model];
+  if (p === undefined) throw new Error(`No Higgsfield price configured for ${model}. Add it in Settings → Prices.`);
+  return round2(p);
+}
+
+export function estimateHiggsfieldImage(s: Settings, quality: string): number {
+  const p = s.prices.higgsfield.image[quality];
+  if (p === undefined) throw new Error(`No Higgsfield image price configured for ${quality}.`);
+  return round2(p);
+}
+
 export const round2 = (n: number) => Math.round(n * 1000) / 1000;
 
 /** Money committed: actual cost where known, otherwise the estimate, for non-failed paid generations. */

@@ -8,7 +8,7 @@ import type { CharacterView } from "@/components/ProjectContext";
 export default function CharactersPage() {
   const [q, setQ] = useState("");
   const { data, reload } = useApi<{ characters: CharacterView[] }>(`/api/characters${q ? `?q=${encodeURIComponent(q)}` : ""}`);
-  const { data: status } = useApi<{ capabilities: { luma: boolean } }>("/api/status");
+  const { data: status } = useApi<{ providers: { keyframe: { id: string; label: string } | null } }>("/api/status");
   const [open, setOpen] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [nw, setNw] = useState({ name: "", fruit: "" });
@@ -76,7 +76,7 @@ export default function CharactersPage() {
         </div>
       )}
       <Modal open={!!open} onClose={() => setOpen(null)} title="Edit character" wide>
-        {open && <CharacterEditor id={open} lumaReady={status?.capabilities.luma} onSaved={reload} />}
+        {open && <CharacterEditor id={open} ai={status?.providers.keyframe} onSaved={reload} />}
       </Modal>
       <Modal open={creating} onClose={() => setCreating(false)} title="New character" footer={<Button variant="primary" disabled={!nw.name || !nw.fruit} onClick={create}>Create</Button>}>
         <div className="grid gap-3 sm:grid-cols-2">
