@@ -54,6 +54,7 @@ interface EditorOpts {
   musicAssetId: string | null;
   musicLicenseConfirmed: boolean;
   captions: "speech" | "captions" | "off";
+  editStyle: "auto" | "punchy" | "cinematic";
   includeUnapproved: boolean;
 }
 
@@ -199,7 +200,14 @@ export default function EditorPage() {
       <div className="grid gap-5 xl:grid-cols-[1.3fr_1fr]">
         <VoicePanel projectId={id} onChanged={reloadPlan} />
         <Card className="space-y-4 p-5">
-          <div className="font-display text-lg font-semibold text-white">Music & captions</div>
+          <div className="font-display text-lg font-semibold text-white">Edit style, music & captions</div>
+          <Field label="Edit style" hint="Punchy = how viral Shorts are cut: hard cuts, slow push-in on every shot, a whoosh on each cut, word-by-word highlighted captions, big hook title in the first seconds.">
+            <select value={opts.editStyle} onChange={(e) => setOpt({ editStyle: e.target.value as EditorOpts["editStyle"] })}>
+              <option value="auto">Auto (punchy for drama/funny/twist, cinematic otherwise)</option>
+              <option value="punchy">Punchy Shorts edit</option>
+              <option value="cinematic">Cinematic (soft transitions)</option>
+            </select>
+          </Field>
           <Field label="Background music">
             <select value={opts.music} onChange={(e) => setOpt({ music: e.target.value as EditorOpts["music"] })}>
               <option value="generated">Generated original bed (free, royalty-free)</option>

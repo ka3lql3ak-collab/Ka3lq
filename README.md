@@ -143,6 +143,13 @@ Library characters are reused only within the same style, so a cartoon strawberr
 5. **Edit & Export:** timeline (scenes, voice, SFX, captions), voice generation and recording, music and caption options. **Preview** (540×960) → **Final** (1080×1920) → **approve** → **Export MP4** (+ SRT/VTT). Also the Shorts kit: 3 hooks, 3 titles, description, hashtags, pinned comment, and cover frames extracted from the final render.
 6. **Render Queue / Export Library / Cost & API Settings.**
 
+### Edit styles
+
+- **Punchy Shorts edit** (auto for drama, funny, and twist): hard cuts, a slow push-in on every shot, a whoosh on each cut, captions where each word highlights as it's spoken, and a big hook title in the first ~2.5 seconds.
+- **Cinematic** (auto for wholesome, emotional, adventure, and mystery): soft crossfades or dip-to-black, plain captions.
+
+Change it per project in **Edit & Export → Edit style**.
+
 ### The render pipeline (FFmpeg)
 
 - Every clip is probed first. Missing or corrupt clips **fail the render with the scene number**; no fake video is produced.

@@ -143,3 +143,30 @@ describe("export (final approval gate)", () => {
     expect(repo.getProject(p.id)!.status).toBe("exported");
   });
 });
+
+describe("punchy Shorts edit", () => {
+  it("word-highlight captions spread each line's time over its words, plus a hook title", async () => {
+    const { karaokeText, toAss } = await import("@/lib/media/timeline");
+    const k = karaokeText("Excuse me? That's MY lounger.", 2);
+    expect(k.match(/\\k(\d+)/g)).toHaveLength(5);
+    const total = [...k.matchAll(/\\k(\d+)/g)].reduce((a, m) => a + Number(m[1]), 0);
+    expect(total).toBeGreaterThan(150);
+    expect(total).toBeLessThanOrEqual(200);
+    const ass = toAss([{ start: 0.5, end: 2.5, text: "So… is this seat taken?" }], { width: 1080, height: 1920, fontSize: 72, karaoke: true, hook: { text: "Day 1 in the villa", start: 0.1, end: 2.5 } });
+    expect(ass).toMatch(/Hook,,0,0,0,,.*DAY 1 IN THE VILLA/);
+    expect(ass).toMatch(/\{\\k\d+\}SO…/);
+  });
+
+  it("auto style is punchy for drama/funny and cinematic for wholesome", async () => {
+    const { resolveEditStyle } = await import("@/lib/features/voice");
+    expect(resolveEditStyle("auto", "drama")).toBe("punchy");
+    expect(resolveEditStyle("auto", "wholesome")).toBe("cinematic");
+    expect(resolveEditStyle("cinematic", "drama")).toBe("cinematic");
+  });
+
+  it("push-in is part of the segment filter only when requested", () => {
+    const info = { durationSec: 5, width: 1080, height: 1920, hasVideo: true, hasAudio: false };
+    expect(render.fitFilter(info, 1080, 1920, 5, { pushIn: 0.08 })).toMatch(/zoompan=z='1\+0\.08\*on\/150'/);
+    expect(render.fitFilter(info, 1080, 1920, 5)).not.toMatch(/zoompan/);
+  });
+});

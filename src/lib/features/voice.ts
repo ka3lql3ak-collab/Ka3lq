@@ -105,10 +105,17 @@ export interface EditorOptions {
   musicAssetId: string | null;
   musicLicenseConfirmed: boolean;
   captions: "speech" | "captions" | "off";
+  /** punchy = Shorts/reality-show edit (hard cuts, push-ins, cut whooshes, word-highlight captions, hook title). */
+  editStyle: "auto" | "punchy" | "cinematic";
   includeUnapproved: boolean;
 }
 
-export const DEFAULT_EDITOR: EditorOptions = { music: "generated", mood: "auto", musicAssetId: null, musicLicenseConfirmed: false, captions: "speech", includeUnapproved: false };
+export const DEFAULT_EDITOR: EditorOptions = { music: "generated", mood: "auto", musicAssetId: null, musicLicenseConfirmed: false, captions: "speech", editStyle: "auto", includeUnapproved: false };
+
+export function resolveEditStyle(style: EditorOptions["editStyle"], genre: string): "punchy" | "cinematic" {
+  if (style !== "auto") return style;
+  return genre === "drama" || genre === "funny" || genre === "twist" ? "punchy" : "cinematic";
+}
 
 export function getEditorOptions(projectId: string): EditorOptions {
   const row = db().prepare("SELECT value_json FROM settings WHERE key = ?").get(`editor:${projectId}`) as { value_json: string } | undefined;

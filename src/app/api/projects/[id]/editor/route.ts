@@ -16,6 +16,7 @@ const Schema = z.object({
   musicAssetId: z.string().nullable().optional(),
   musicLicenseConfirmed: z.boolean().optional(),
   captions: z.enum(["speech", "captions", "off"]).optional(),
+  editStyle: z.enum(["auto", "punchy", "cinematic"]).optional(),
   includeUnapproved: z.boolean().optional(),
 });
 

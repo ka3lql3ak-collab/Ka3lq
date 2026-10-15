@@ -11,7 +11,7 @@ import { buildTimeline, captionCues, toAss, toSrt, toVtt, type Timeline } from "
 import { escapeFilterPath } from "./media/tts";
 import { getSettings } from "./settings";
 import { getAsset, listAssets, listScenes, requireProject, createAsset, NotFoundError, ValidationError, ConflictError } from "./repo";
-import { generateVoices, getEditorOptions, projectVoiceLines } from "./features/voice";
+import { generateVoices, getEditorOptions, projectVoiceLines, resolveEditStyle } from "./features/voice";
 import { log, redact } from "./log";
 
 export type Quality = "preview" | "final";
@@ -126,10 +126,13 @@ export function queueRender(projectId: string, quality: Quality) {
 }
 
 /** Fit any clip into W×H without stretching or cropping the subject: blurred fill behind letterboxed footage. */
-export function fitFilter(info: ProbeInfo, w: number, h: number, dur: number) {
+export function fitFilter(info: ProbeInfo, w: number, h: number, dur: number, opts: { pushIn?: number } = {}) {
   const ar = (info.width ?? w) / (info.height ?? h);
   const target = w / h;
-  const conform = `setsar=1,fps=${FPS},tpad=stop_mode=clone:stop_duration=${(dur + 1).toFixed(3)},trim=duration=${dur.toFixed(3)},setpts=PTS-STARTPTS,format=yuv420p`;
+  // Optional slow push-in across the whole shot (keeps static or AI shots feeling alive).
+  const frames = Math.max(1, Math.round(dur * FPS));
+  const push = opts.pushIn ? `,zoompan=z='1+${opts.pushIn}*on/${frames}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${w}x${h}:fps=${FPS}` : "";
+  const conform = `setsar=1,fps=${FPS},tpad=stop_mode=clone:stop_duration=${(dur + 1).toFixed(3)},trim=duration=${dur.toFixed(3)},setpts=PTS-STARTPTS${push},format=yuv420p`;
   if (Math.abs(ar - target) / target < 0.03) return `[0:v]scale=${w}:${h}:force_original_aspect_ratio=increase:flags=lanczos,crop=${w}:${h},${conform}[v]`;
   return `[0:v]split=2[a][b];[a]scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h},boxblur=luma_radius=${Math.round(w / 27)}:luma_power=2,eq=brightness=-0.08:saturation=1.1[bg];[b]scale=${w}:${h}:force_original_aspect_ratio=decrease:flags=lanczos[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,${conform}[v]`;
 }
@@ -162,6 +165,10 @@ async function doRender(ctx: JobContext) {
     step(0.03, "Generating missing voice lines (free, local)…");
     await generateVoices(projectId, (p, m) => ctx.progress(0.03 + p * 0.12, m));
 
+    const editStyle = resolveEditStyle(editor.editStyle, project.settings.genre);
+    const punchy = editStyle === "punchy";
+    const transition = punchy ? "cut" : s.render.transition;
+    note(`Edit style: ${punchy ? "punchy (hard cuts, push-ins, cut whooshes, word-highlight captions, hook title)" : `cinematic (${transition})`}.`);
     const scenes = listScenes(projectId).filter((sc) => ready.includedSceneIds.includes(sc.id));
     const voice = projectVoiceLines(projectId);
     step(0.16, "Checking clips…");
@@ -191,10 +198,12 @@ async function doRender(ctx: JobContext) {
         sfx: sc.sfx.map((x) => matchSfx(x)).filter((x): x is NonNullable<typeof x> => !!x),
         lines: (voice.find((v) => v.sceneId === sc.id)?.lines ?? []).map((l) => ({ text: l.text, speaker: l.speaker, durationSec: l.asset ? Number(l.durationSec ?? 0) : 0, file: l.asset ? fromRel(l.asset.path) : null })),
       })),
-      s.render.transition,
+      transition,
       s.render.transitionSec,
     );
     tl.warnings.forEach(note);
+    // Punchy edits: a whoosh lands on every cut.
+    if (punchy) for (let i = 1; i < tl.scenes.length; i++) tl.scenes[i].sfx.unshift({ name: "whoosh", atSec: Math.max(0, tl.scenes[i].startSec - 0.18) });
 
     // 1. Normalise each clip into a segment of exactly its timeline duration.
     const segs: string[] = [];
@@ -202,19 +211,19 @@ async function doRender(ctx: JobContext) {
       if (ctx.isCancelled()) throw new Error("Render cancelled");
       const seg = path.join(work, `seg-${i}.mp4`);
       step(0.18 + (0.32 * i) / tl.scenes.length, `Conforming scene ${tl.scenes[i].idx + 1} to ${w}×${h} @ ${FPS}fps…`);
-      await ffmpeg(["-loglevel", "error", "-i", clips[i].abs, "-filter_complex", fitFilter(clips[i].info, w, h, tl.scenes[i].durationSec), "-map", "[v]", "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", String(Math.max(16, crf - 4)), "-r", String(FPS), seg]);
+      await ffmpeg(["-loglevel", "error", "-i", clips[i].abs, "-filter_complex", fitFilter(clips[i].info, w, h, tl.scenes[i].durationSec, punchy ? { pushIn: i % 2 === 0 ? 0.08 : 0.06 } : {}), "-map", "[v]", "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", String(Math.max(16, crf - 4)), "-r", String(FPS), seg]);
       segs.push(seg);
     }
 
     // 2. Join with transitions.
-    step(0.52, `Joining ${segs.length} scenes (${s.render.transition})…`);
+    step(0.52, `Joining ${segs.length} scenes (${transition})…`);
     const joined = path.join(work, "joined.mp4");
     if (segs.length === 1 || tl.transitionSec === 0) {
       const list = path.join(work, "list.txt");
       fs.writeFileSync(list, segs.map((f) => `file '${f.replace(/'/g, "'\\''")}'`).join("\n"));
       await ffmpeg(["-loglevel", "error", "-f", "concat", "-safe", "0", "-i", list, "-c", "copy", joined]);
     } else {
-      const kind = s.render.transition === "fadeblack" ? "fadeblack" : "fade";
+      const kind = transition === "fadeblack" ? "fadeblack" : "fade";
       let chain = "";
       let last = "[0:v]";
       for (let i = 1; i < segs.length; i++) {
@@ -283,7 +292,11 @@ async function doRender(ctx: JobContext) {
     // 4. Captions.
     const cues = captionCues(tl, s.render.captions ? editor.captions : "off");
     const ass = path.join(work, "captions.ass");
-    fs.writeFileSync(ass, toAss(cues, { width: w, height: h, fontSize: s.render.captionSize }));
+    const hookText = (scenes[0]?.caption || project.story?.hook || "").replace(/[.…!]+$/, "");
+    const hook = punchy && s.render.captions && hookText && hookText.split(/\s+/).length <= 8 ? { text: hookText, start: 0.1, end: Math.min(2.6, tl.scenes[0]?.durationSec ?? 2.6) } : null;
+    // When the hook title is on screen, don't also show the same words as a caption.
+    const shownCues = hook ? cues.filter((c) => !(c.start < hook.end && c.text.replace(/[.…!]+$/, "").toLowerCase() === hookText.toLowerCase())) : cues;
+    fs.writeFileSync(ass, toAss(shownCues, { width: w, height: h, fontSize: s.render.captionSize, karaoke: punchy, hook }));
     const srt = path.join(work, "captions.srt");
     const vtt = path.join(work, "captions.vtt");
     fs.writeFileSync(srt, toSrt(cues));

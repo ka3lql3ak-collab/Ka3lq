@@ -124,7 +124,16 @@ function assTime(sec: number) {
  * Styled, mobile-safe captions. Bottom margin keeps text above the Shorts UI
  * (title/channel/buttons occupy roughly the bottom fifth and right edge).
  */
-export function toAss(cues: Cue[], opts: { width: number; height: number; fontSize: number }) {
+/** Spread a cue's duration over its words (weighted by length) as ASS \\k karaoke tags, in centiseconds. */
+export function karaokeText(text: string, durationSec: number) {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  const weights = words.map((w) => Math.max(2, w.replace(/[^\p{L}\p{N}]/gu, "").length + 1));
+  const total = weights.reduce((a, b) => a + b, 0);
+  const cs = Math.max(words.length, Math.round(durationSec * 100 * 0.9));
+  return words.map((w, i) => `{\\k${Math.max(1, Math.round((weights[i] / total) * cs))}}${w}`).join(" ");
+}
+
+export function toAss(cues: Cue[], opts: { width: number; height: number; fontSize: number; karaoke?: boolean; hook?: { text: string; start: number; end: number } | null }) {
   const scale = opts.height / 1920;
   const size = Math.round(opts.fontSize * scale);
   const marginV = Math.round(560 * scale);
@@ -140,10 +149,13 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Inter,${size},&H00FFFFFF,&H00FFFFFF,&H00201018,&H80000000,-1,0,0,0,100,100,0,0,1,${outline},${Math.round(3 * scale)},2,${marginLR},${marginLR},${marginV},1
+Style: Default,Inter,${size},${opts.karaoke ? "&H0036E3FF" : "&H00FFFFFF"},&H00FFFFFF,&H00201018,&H80000000,-1,0,0,0,100,100,0,0,1,${outline},${Math.round(3 * scale)},2,${marginLR},${marginLR},${marginV},1
+Style: Hook,Inter,${Math.round(size * 1.15)},&H00FFFFFF,&H00FFFFFF,&H00201018,&HB0101018,-1,0,0,0,100,100,0,0,3,${Math.round(18 * scale)},0,8,${marginLR},${marginLR},${Math.round(150 * scale)},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-${cues.map((c) => `Dialogue: 0,${assTime(c.start)},${assTime(c.end)},Default,,0,0,0,,{\\fad(90,90)\\fscx92\\fscy92\\t(0,140,\\fscx100\\fscy100)}${esc(c.text)}`).join("\n")}
+${opts.hook && opts.hook.text.trim() ? `Dialogue: 1,${assTime(opts.hook.start)},${assTime(opts.hook.end)},Hook,,0,0,0,,{\\fad(60,200)\\fscx80\\fscy80\\t(0,160,\\fscx100\\fscy100)}${esc(opts.hook.text.toUpperCase())}\n` : ""}${cues
+  .map((c) => `Dialogue: 0,${assTime(c.start)},${assTime(c.end)},Default,,0,0,0,,{\\fad(90,90)\\fscx92\\fscy92\\t(0,140,\\fscx100\\fscy100)}${opts.karaoke ? karaokeText(esc(c.text.toUpperCase()), c.end - c.start) : esc(c.text)}`)
+  .join("\n")}
 `;
 }
