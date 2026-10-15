@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink-950: #0b0a10;
+  --color-ink-900: #121019;
+  --color-ink-850: #17141f;
+  --color-ink-800: #1d1927;
+  --color-ink-700: #2a2537;
+  --color-ink-600: #3a344b;
+  --color-ink-500: #5a536d;
+  --color-ink-400: #8a849c;
+  --color-ink-300: #b7b2c6;
+  --color-ink-200: #dcd8e6;
+  --color-peach-400: #ffb07a;
+  --color-peach-500: #ff8f5a;
+  --color-berry-400: #ff6b8b;
+  --color-berry-500: #f0476f;
+  --color-lime-400: #b8e86b;
+  --color-lime-500: #8fd14f;
+  --color-sky-400: #7cc4ff;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Inter Display", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  background: var(--color-ink-950);
+  color: var(--color-ink-200);
+  color-scheme: dark;
+}
+
+body {
+  background-image:
+    radial-gradient(1200px 600px at 85% -10%, rgba(255, 143, 90, 0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(240, 71, 111, 0.07), transparent 60%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(255, 143, 90, 0.35);
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: var(--color-ink-700);
+  border-radius: 8px;
+}
+
+@layer base {
+input,
+textarea,
+select {
+  background: var(--color-ink-900);
+  border: 1px solid var(--color-ink-700);
+  border-radius: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  color: var(--color-ink-200);
+  outline: none;
+  width: 100%;
+  font-size: 0.9rem;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-peach-500);
+  box-shadow: 0 0 0 3px rgba(255, 143, 90, 0.15);
+}
+input[type="checkbox"],
+input[type="range"] {
+  width: auto;
+  accent-color: var(--color-peach-500);
+}
+label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-ink-400);
+}
+
+}
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, var(--color-ink-800) 0%, var(--color-ink-700) 50%, var(--color-ink-800) 100%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
