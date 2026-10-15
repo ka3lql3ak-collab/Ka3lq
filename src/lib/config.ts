@@ -1,4 +1,5 @@
 import "server-only";
+import os from "node:os";
 import path from "node:path";
 
 /** Server-side configuration. Never import this from client components. */
@@ -9,7 +10,9 @@ function env(name: string): string | undefined {
 
 export const config = {
   get dataDir() {
-    return path.resolve(env("DATA_DIR") ?? "./data");
+    // Outside the project folder by default so the dev server's file watcher
+    // does not reload the app every time a clip or the database is written.
+    return path.resolve(env("DATA_DIR") ?? path.join(os.homedir(), ".fruit-shorts-studio"));
   },
   get forceDemo() {
     return env("DEMO_MODE") === "true";
@@ -30,7 +33,7 @@ export const config = {
       return env("ANTHROPIC_API_KEY");
     },
     get model() {
-      return env("ANTHROPIC_MODEL") ?? "claude-haiku-5-5";
+      return env("ANTHROPIC_MODEL") ?? "claude-opus-5-5";
     },
   },
   openaiCompat: {

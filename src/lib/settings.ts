@@ -15,7 +15,7 @@ export const DEFAULT_PRICES = {
   } as Record<string, Record<string, number>>, // USD per 5-second clip
   ninesMultiplier: 1.8, // 9s clip price = 5s price * multiplier
   image: { "photon-1": 0.02, "photon-flash-1": 0.006 } as Record<string, number>,
-  storyLlm: 0.02, // per story, for paid LLMs
+  storyLlm: 0.25, // per story estimate for a paid LLM (Anthropic); Ollama/local are free
 };
 
 export const SettingsSchema = z.object({
@@ -33,7 +33,7 @@ export const SettingsSchema = z.object({
   video: z.object({
     model: z.enum(["ray-2", "ray-flash-2"]),
     resolution: z.enum(["540p", "720p", "1080p", "4k"]),
-    duration: z.enum(["5s", "9s"]),
+    duration: z.enum(["auto", "5s", "9s"]),
   }),
   image: z.object({
     provider: z.enum(["sketch", "luma"]),
@@ -55,7 +55,7 @@ export type Settings = z.infer<typeof SettingsSchema>;
 export const DEFAULT_SETTINGS: Settings = {
   budget: { perSceneUsd: 2, perProjectUsd: 10, monthlyUsd: 25 },
   prices: DEFAULT_PRICES,
-  video: { model: "ray-flash-2", resolution: "720p", duration: "5s" },
+  video: { model: "ray-flash-2", resolution: "720p", duration: "auto" },
   image: { provider: "sketch", model: "photon-flash-1" },
   render: {
     transition: "crossfade",
