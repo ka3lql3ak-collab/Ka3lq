@@ -295,6 +295,12 @@ export async function cancelGeneration(id: string): Promise<GenerationView> {
         await provider.cancel(toRecord(r));
         note = "Cancelled and deleted at the provider. Work already started may still be billed by the provider.";
       } catch (e) {
+        // The provider refused (e.g. Higgsfield can't cancel a request that's already processing).
+        // It will finish and bill, so keep tracking it and deliver the clip you paid for.
+        if ((e as { status?: number }).status === 400) {
+          setGen(id, { error: `${redact(e)} Still tracking it so you receive the result.` });
+          return getGeneration(id)!;
+        }
         note = `Stopped tracking, but the provider cancel call failed: ${redact(e)}. It may still complete and bill.`;
       }
     }

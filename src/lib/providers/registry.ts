@@ -216,7 +216,7 @@ async function higgsfieldCancel(gen: GenerationRecord) {
   try {
     await higgsfield.cancel(gen.providerJobId);
   } catch (e) {
-    if ((e as ProviderError).status === 400) throw new ProviderError("Higgsfield only cancels queued requests; this one is already processing and will finish (and be billed).");
+    if ((e as ProviderError).status === 400) throw new ProviderError("Higgsfield only cancels queued requests; this one is already processing and will finish (and be billed).", 400);
     throw e;
   }
 }

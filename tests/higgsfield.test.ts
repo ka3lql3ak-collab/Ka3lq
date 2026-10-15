@@ -265,13 +265,16 @@ describe("Higgsfield: failures never cause duplicate charges", () => {
     expect(repo.getScene(sid)!.clipAssetId).toBeNull();
   });
 
-  it("cancelling an in-progress request explains that Higgsfield will still finish it", async () => {
+  it("cancelling an in-progress request keeps tracking it (Higgsfield finishes and bills it)", async () => {
     const sid = await newScene();
     const { generation } = visuals.requestClip(projectId, sid, { requestId: rid(), confirmCost: true, estimate: 0.5 });
     await runSubmit();
     const g = await gens.cancelGeneration(generation.id);
-    expect(g.status).toBe("cancelled");
-    expect(g.error).toMatch(/only cancels queued requests/);
+    expect(g.status).toBe("submitted");
+    expect(g.error).toMatch(/only cancels queued requests.*Still tracking/);
+    statuses = ["completed"];
+    await gens._test.pollOne(generation.id);
+    expect(gens.getGeneration(generation.id)!.status).toBe("completed");
   });
 });
 
