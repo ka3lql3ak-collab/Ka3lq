@@ -39,10 +39,10 @@ export interface ExistingCharacter {
 }
 
 export function buildStoryPrompt(s: StorySettings, existing: ExistingCharacter[], variation: number) {
-  const system = `You are an award-winning writer and storyboard artist for short-form 3D animated family films, writing original YouTube Shorts starring adorable fruit characters.
+  const system = `You are an award-winning writer and storyboard artist for short-form 3D animation, writing original YouTube Shorts starring fruit characters.
 Write stories that are instantly clear on a phone with the sound off: a scroll-stopping visual hook in the first 1-2 seconds, a clear conflict, and an emotional or funny payoff. No exposition dumps.
 Each scene becomes ONE AI-generated video clip, so each scene must be a single continuous shot that a video model can render: one location, one main action, simple physical motion, no on-screen text or signs, no complex choreography, at most 3 characters in frame.
-Visual descriptions are always in English (they are prompts for a video model) and must describe the characters by name and appearance, the setting, lighting and the motion. Dialogue, narration and captions are written in ${s.language}.`;
+${s.visualStyle === "fruit people" ? "Characters are stylish ADULT humanoids: realistic human bodies with a photoreal fruit as the head and a human-like face on the fruit (the viral 'fruit people' look). Keep outfits tasteful and non-suggestive; drama comes from situations and reactions, not revealing clothing.\n" : "Characters are cute, rounded fruit creatures with big expressive eyes and small limbs.\n"}${s.genre === "drama" ? "Genre: a reality-dating-show style villa drama (arrivals, flirting, rivals, a surprise text, a choice, a cliffhanger), funny and PG.\n" : ""}Visual descriptions are always in English (they are prompts for a video model) and must describe the characters by name and appearance, the setting, lighting and the motion. Dialogue, narration and captions are written in ${s.language}.`;
   const user = `Story idea: "${s.idea}"
 Genre: ${s.genre}. Total length: exactly ${s.durationSec} seconds across exactly ${s.sceneCount} scenes (each scene 2-9 seconds; durations must add up to ${s.durationSec}).
 Characters: ${s.characterCount}. Dialogue style: ${s.dialogueStyle}${s.dialogueStyle === "no-dialogue" ? " (leave every dialogue array empty)" : " (short, natural lines; at most 2 lines per scene, under 12 words each)"}.

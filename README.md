@@ -125,6 +125,15 @@ The app **never switches to another paid provider on its own**. If Higgsfield is
 
 ---
 
+## Visual styles
+
+Pick a preset on **New Story**:
+
+- **Cute family-film fruit** (default): round, big-eyed Pixar-style fruit creatures with tiny limbs, for wholesome stories.
+- **Fruit people · villa drama**: the viral TikTok look. Adult characters with realistic human bodies and photoreal fruit heads with human-like faces, a sunny luxury resort, and reality-show storylines (arrival, flirting, a rival, a "recoupling" text, the choice, a cliffhanger). Characters get stable outfits that are written into every prompt for consistency. Prompts ask for tasteful, non-suggestive outfits: Higgsfield's moderation rejects revealing content (refunded, but wasted time), and YouTube restricts ads on sexualised videos and thumbnails. The drama comes from situations and reactions.
+
+Library characters are reused only within the same style, so a cartoon strawberry never shows up in a fruit-people project.
+
 ## Using the app
 
 1. **New Story:** idea, genre, 15/30/45/60s, scene count, characters, dialogue, narrator, style, language, and writer.

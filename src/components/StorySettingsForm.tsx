@@ -39,8 +39,8 @@ export function StorySettingsForm({ value, onChange, caps }: { value: StorySetti
       </Field>
       <Field label="Genre">
         <select value={value.genre} onChange={(e) => set("genre", e.target.value)}>
-          {["funny", "emotional", "wholesome", "adventure", "mystery", "twist"].map((g) => (
-            <option key={g} value={g}>{g === "twist" ? "surprising twist" : g}</option>
+          {["funny", "emotional", "wholesome", "adventure", "mystery", "twist", "drama"].map((g) => (
+            <option key={g} value={g}>{g === "twist" ? "surprising twist" : g === "drama" ? "villa drama (reality-show)" : g}</option>
           ))}
         </select>
       </Field>
@@ -79,8 +79,8 @@ export function StorySettingsForm({ value, onChange, caps }: { value: StorySetti
       </Field>
       <Field label="Visual style">
         <select value={value.visualStyle} onChange={(e) => set("visualStyle", e.target.value)}>
-          {["3d family film", "claymation", "storybook 3d", "glossy toy"].map((g) => (
-            <option key={g}>{g}</option>
+          {["3d family film", "fruit people", "claymation", "storybook 3d", "glossy toy"].map((g) => (
+            <option key={g} value={g}>{g === "fruit people" ? "fruit people (human bodies, fruit heads)" : g === "3d family film" ? "cute 3D family film (round fruit)" : g}</option>
           ))}
         </select>
       </Field>

@@ -24,7 +24,7 @@ export interface ProjectSummary {
 }
 
 const STAGES = ["Idea", "Script", "Storyboard", "Animating", "Editing", "Exported"];
-const GENRES = ["funny", "emotional", "wholesome", "adventure", "mystery", "twist"];
+const GENRES = ["funny", "emotional", "wholesome", "adventure", "mystery", "twist", "drama"];
 
 export function ProjectLibrary({ pick, limit }: { pick?: string | null; limit?: number }) {
   const [q, setQ] = useState("");

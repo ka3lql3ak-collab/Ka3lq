@@ -53,7 +53,7 @@ const MOODS: Record<string, { chords: number[][]; bpm: number; bell: boolean }> 
 };
 
 export function moodForGenre(genre: string) {
-  return genre === "funny" || genre === "adventure" ? "playful" : genre === "emotional" ? "minor" : genre === "mystery" || genre === "twist" ? "mystery" : "major";
+  return genre === "funny" || genre === "adventure" || genre === "drama" ? "playful" : genre === "emotional" ? "minor" : genre === "mystery" || genre === "twist" ? "mystery" : "major";
 }
 
 /**

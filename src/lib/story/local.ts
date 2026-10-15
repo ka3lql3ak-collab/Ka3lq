@@ -5,7 +5,7 @@
  * LLM providers produce richer stories; this one guarantees the app works for $0.
  */
 import { findFruits, fruitInfo } from "./fruits";
-import type { Story, StoryScene, StorySettings, DialogueLine } from "../types";
+import { isHumanoidStyle, type Story, type StoryScene, type StorySettings, type DialogueLine } from "../types";
 
 type Beat = StoryScene["beat"];
 
@@ -87,6 +87,7 @@ const GENRE_DEFAULT_SETTING: Record<StorySettings["genre"], { place: string; lig
   adventure: { place: "a lush backyard garden seen from fruit height, like a jungle", light: "dappled sunlight through leaves" },
   mystery: { place: "a quiet pantry shelf at night", light: "silvery moonlight and a warm nightlight glow" },
   twist: { place: "a quiet supermarket produce aisle after closing", light: "dim fluorescent light with long soft shadows" },
+  drama: { place: "the pool deck of a luxury tropical villa with palm trees and sun loungers", light: "bright golden-hour sunshine sparkling on the pool" },
 };
 
 const ADJ_TRAITS: Record<string, string> = {
@@ -139,6 +140,7 @@ function problemFor(b: Cast | undefined, genre: StorySettings["genre"]): string 
     adventure: `the way home is blocked by a giant garden hose river`,
     mystery: `someone keeps stealing the sugar cubes at night`,
     twist: `the store closes in one minute and the lights are going out`,
+    drama: `${b?.name ?? "someone"} was already coupled up with someone else`,
   }[genre];
 }
 
@@ -149,6 +151,7 @@ const NARR_HOOK: Record<StorySettings["genre"], string[]> = {
   adventure: ["{A} had never been past the edge of the counter.", "Every hero starts small. {A} started very small."],
   mystery: ["Every night, something moved in the pantry. Tonight, {A} was watching.", "Nobody knew who left the tiny footprints. {A} was going to find out."],
   twist: ["Everyone thought {A} was the loneliest fruit in the store. Everyone was wrong.", "{A} thought this was an ordinary night. It wasn't."],
+  drama: ["Day one in the villa, and {A} is already causing drama.", "Nobody expected {A} to walk in like that."],
 };
 
 interface Ctx {
@@ -236,6 +239,7 @@ function sceneFor(c: Ctx, beat: Beat, i: number, n: number, duration: number): S
     adventure: ["curious", "excited", "daring", "breathless", "victorious", "proud"],
     mystery: ["suspicious", "uneasy", "tense", "startled", "relieved", "amused"],
     twist: ["calm", "puzzled", "worried", "shocked", "delighted", "knowing"],
+    drama: ["confident", "flirty", "jealous", "shocked", "triumphant", "smug"],
   }[genre];
   const emotion = emo[Math.min(emo.length - 1, Math.floor((i / Math.max(1, n - 1)) * (emo.length - 1)))];
 
@@ -299,8 +303,8 @@ function sceneFor(c: Ctx, beat: Beat, i: number, n: number, duration: number): S
       caption: c.C ? fill(`…and then came {C}`, c) : "Best friends",
     }),
   };
-  const base = T[beat]();
-  const dialogue = dialogueFor(c, beat);
+  const base = genre === "drama" ? dramaScene(c, beat, both) : T[beat]();
+  const dialogue = genre === "drama" ? dramaDialogue(c, beat) : dialogueFor(c, beat);
   // Keep speech inside the shot (~2.4 words/s plus breathing room). Dialogue wins over narration,
   // except on the hook where the narrator line *is* the hook.
   const words = (t: string) => t.split(/\s+/).filter(Boolean).length;
@@ -314,11 +318,92 @@ function sceneFor(c: Ctx, beat: Beat, i: number, n: number, duration: number): S
   return { beat, durationSec: duration, emotion, dialogue, ...base };
 }
 
+/* ------------------------- Villa drama (reality show) ------------------------- */
+
+function dramaScene(c: Ctx, beat: Beat, both: string[]): Omit<StoryScene, "beat" | "durationSec" | "dialogue" | "emotion"> {
+  const narrate = c.s.narratorStyle !== "none";
+  const C = c.C;
+  const rival = C ? C.name : "the others";
+  const trio = C ? [...both, C.name] : both;
+  const T: Record<Beat, () => Omit<StoryScene, "beat" | "durationSec" | "dialogue" | "emotion">> = {
+    hook: () => ({
+      visual: fill(`{A} struts across {place} in slow motion, takes off their sunglasses and smirks; everyone lounging by the pool turns to stare.`, c),
+      camera: "Low-angle slow-motion tracking shot, then a snap zoom onto {A}'s face".replace("{A}", c.A.name),
+      characters: [c.A.name],
+      action: fill(`{A} flips their sunglasses up and gives a confident wink.`, c),
+      narration: narrate ? fill(pick(c.rnd, NARR_HOOK.drama), c) : "",
+      sfx: ["whoosh", "ding"],
+      caption: "Day 1 in the villa",
+    }),
+    setup: () => ({
+      visual: c.B ? fill(`{A} and {B} share a sun lounger by the sparkling pool, laughing and leaning close${C ? `, while ${C.name} watches from the bar, sipping a smoothie` : ""}.`, c) : fill(`{A} poses at the edge of the pool while the others whisper.`, c),
+      camera: "Medium two-shot, slow push-in, then a quick cut-away glance".trim(),
+      characters: trio,
+      action: c.B ? fill(`{B} giggles at {A}'s joke and plays with their hair.`, c) : fill(`{A} checks their reflection in the pool.`, c),
+      narration: narrate && c.B ? fill(`And {A} has eyes on {B}.`, c) : "",
+      sfx: ["sparkle"],
+      caption: c.B ? fill(`{A} + {B}?`, c) : fill(`{A} is ready`, c),
+    }),
+    conflict: () => ({
+      visual: C ? fill(`{C} storms over to the lounger, arms crossed, glaring at {A}; the other islanders gasp and lower their drinks.`, c) : fill(`A rival walks in and everyone gasps.`, c),
+      camera: "Whip-pan to the rival, then dramatic close-ups on shocked faces",
+      characters: trio,
+      action: fill(`${rival} points accusingly; {A} raises an eyebrow, unbothered.`, c),
+      narration: narrate ? fill(`But {problem}.`, c) : "",
+      sfx: ["thud", "heartbeat"],
+      caption: C ? `${C.name} is NOT happy` : "Uh oh",
+    }),
+    turn: () => ({
+      visual: fill(`A phone buzzes on the table: everyone crowds around to read the text. Close-ups of wide eyes and dropped jaws.`, c),
+      camera: "Insert shot of the phone screen (blank glow, no readable text), then fast cuts between reaction close-ups",
+      characters: trio,
+      action: fill(`{B} reads it, looks at {A}, then at ${rival}.`, c),
+      narration: narrate ? `Then came the text. Recoupling. Tonight.` : "",
+      sfx: ["ding", "drumroll"],
+      caption: "Recoupling tonight",
+    }),
+    payoff: () => ({
+      visual: fill(`At the glowing fire pit at night, {B} stands up, takes a breath and steps toward {A}; {A} grins as ${rival} gasps.`, c),
+      camera: "Slow dolly in on {B}, reverse shot to {A}'s reaction, wide shot of the group".replace("{B}", c.B?.name ?? c.A.name).replace("{A}", c.A.name),
+      characters: trio,
+      action: fill(`{B} takes {A}'s hand; the islanders cheer.`, c),
+      narration: "",
+      sfx: ["drumroll", "chime"],
+      caption: c.B ? fill(`{B} picks {A}!`, c) : `${c.A.name} wins`,
+    }),
+    button: () => ({
+      visual: C ? fill(`Close-up: {C}, alone by the pool, slowly lowers their sunglasses and looks straight into the camera with a sly smile.`, c) : fill(`{A} winks at the camera as the pool lights glow.`, c),
+      camera: "Locked-off close-up, tiny push-in",
+      characters: [C ? C.name : c.A.name],
+      action: "A knowing look straight down the lens.",
+      narration: "",
+      sfx: ["pop"],
+      caption: "To be continued…",
+    }),
+  };
+  return T[beat]();
+}
+
+function dramaDialogue(c: Ctx, beat: Beat): DialogueLine[] {
+  if (c.s.dialogueStyle === "no-dialogue") return [];
+  const lines: Record<Beat, [string, string][]> = {
+    hook: [["A", "Did someone order trouble?"]],
+    setup: [["A", "So… is this seat taken?"], ["B", "It is now."]],
+    conflict: [["C", "Excuse me? That's MY lounger."], ["A", "Not anymore, babe."]],
+    turn: [["B", "Oh no. Oh no no no."]],
+    payoff: [["B", "I choose… {A}."]],
+    button: [["C", "This isn't over."]],
+  };
+  return lines[beat]
+    .filter(([who]) => (who === "B" ? !!c.B : who === "C" ? !!c.C : true))
+    .map(([who, text]) => ({ speaker: who === "A" ? c.A.name : who === "B" ? c.B!.name : c.C!.name, text: fill(text, c) }));
+}
+
 export function composeLocalStory(settings: StorySettings, variation = 0): Story {
   const rnd = seededRng(`${settings.idea}|${settings.genre}|${variation}`);
   const idea = settings.idea;
   const found = findFruits(idea);
-  const defaults = ["strawberry", "orange", "blueberry", "pineapple"];
+  const defaults = settings.genre === "drama" || isHumanoidStyle(settings.visualStyle) ? ["strawberry", "banana", "watermelon", "pear"] : ["strawberry", "orange", "blueberry", "pineapple"];
   const fruitsWanted = Math.max(1, Math.min(4, settings.characterCount));
   const castInfo: { fruit: string; adj: string }[] = [];
   for (const f of found) {
@@ -347,7 +432,7 @@ export function composeLocalStory(settings: StorySettings, variation = 0): Story
   const durations = allocateDurations(beats, settings.durationSec);
   const scenes = beats.map((b, i) => sceneFor(ctx, b, i, beats.length, durations[i]));
 
-  const title = B ? pick(rnd, [`${A.name} and the ${B.adj ? cap(B.adj.split(" ").pop()!) + " " : ""}${cap(B.fruit)}`, `${A.name} Meets ${B.name}`, `The Day ${A.name} Found ${B.name}`]) : `${A.name}'s Big Day`;
+  const title = settings.genre === "drama" && B ? pick(rnd, [`Villa Drama: ${A.name} vs ${C?.name ?? B.name}`, `${B.name} Has to Choose`, `${A.name} Enters the Villa`]) : B ? pick(rnd, [`${A.name} and the ${B.adj ? cap(B.adj.split(" ").pop()!) + " " : ""}${cap(B.fruit)}`, `${A.name} Meets ${B.name}`, `The Day ${A.name} Found ${B.name}`]) : `${A.name}'s Big Day`;
 
   return {
     title,
@@ -356,8 +441,8 @@ export function composeLocalStory(settings: StorySettings, variation = 0): Story
     characters: cast.map((c, i) => ({
       name: c.name,
       fruit: c.fruit,
-      appearance: describeAppearance(c.fruit, c.adj, i),
-      personality: traitFor(c.adj.split(" ").pop() ?? "", i === 0 ? "warm-hearted, curious and brave when it counts" : i === 1 ? "sweet, a little nervous, very loyal" : "funny, wise and full of surprises"),
+      appearance: describeAppearance(c.fruit, c.adj, i, settings.visualStyle),
+      personality: settings.genre === "drama" ? (["confident, flirty and a little chaotic", "charming, indecisive and sweet", "competitive, dramatic and iconic", "chill, funny, the villa's peacemaker"][i] ?? "dramatic") : traitFor(c.adj.split(" ").pop() ?? "", i === 0 ? "warm-hearted, curious and brave when it counts" : i === 1 ? "sweet, a little nervous, very loyal" : "funny, wise and full of surprises"),
       voiceHint: i === 0 ? "bright, gentle" : i === 1 ? "tiny, high, sweet" : "warm, slightly deeper",
     })),
     scenes,
@@ -367,8 +452,13 @@ export function composeLocalStory(settings: StorySettings, variation = 0): Story
 
 const ACCESSORIES = ["a tiny knitted scarf", "a little leaf-shaped backpack", "a small polka-dot bow", "a tiny backwards cap", "round little glasses", "a red ribbon around the stem"];
 
-export function describeAppearance(fruit: string, adj: string, index: number) {
+const OUTFITS = ["a crisp white linen shirt and tailored shorts", "a flowing coral sundress", "a lime-green resort co-ord set", "a black tank top and patterned board shorts"];
+
+export function describeAppearance(fruit: string, adj: string, index: number, style = "3d family film") {
   const info = fruitInfo(fruit);
+  if (isHumanoidStyle(style)) {
+    return `A stylish adult with a realistic human body, natural skin and normal human proportions, whose head is a glossy photoreal ${info.key} with ${info.skin}; a human-like face sculpted into the fruit with big expressive eyes, defined eyebrows, a small nose and full lips; wearing ${OUTFITS[index % OUTFITS.length]}.`;
+  }
   const size = /tiny|little|small/.test(adj) ? "tiny, palm-sized" : /old|big|giant/.test(adj) ? "plump, slightly larger" : "small, rounded";
   return `A ${size} ${info.key} character with ${info.skin}; huge expressive glossy eyes with sparkly highlights, soft rosy cheeks, a small expressive mouth, short noodle-like arms and stubby legs, wearing ${ACCESSORIES[index % ACCESSORIES.length]}.`;
 }

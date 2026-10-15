@@ -14,6 +14,10 @@ export interface SketchCharacter {
   name: string;
   fruit: string;
   palette: string[];
+  /** Human body with a fruit head (the "fruit people" style). */
+  humanoid?: boolean;
+  /** Outfit description from the Character Bible; its colour words drive the sketch. */
+  outfit?: string;
 }
 
 type Expr = "happy" | "sad" | "surprised" | "determined" | "neutral";
@@ -47,7 +51,7 @@ function bodyPath(shape: string, s: number) {
   }
 }
 
-export function fruitSvg(c: SketchCharacter, x: number, y: number, size: number, expr: Expr, flip = false, uid = "c") {
+export function fruitSvg(c: SketchCharacter, x: number, y: number, size: number, expr: Expr, flip = false, uid = "c", opts: { headOnly?: boolean } = {}) {
   const info = fruitInfo(c.fruit);
   const [body, accent, hi] = [c.palette[0] ?? info.colors[0], c.palette[1] ?? info.colors[1], c.palette[2] ?? info.colors[2]];
   const s = size;
@@ -92,8 +96,8 @@ export function fruitSvg(c: SketchCharacter, x: number, y: number, size: number,
   <ellipse cx="${s * 0.36}" cy="${s * 1.3}" rx="${s * 0.14}" ry="${s * 0.07}" fill="#3a2a22"/>`;
   return `<g transform="translate(${x} ${y}) scale(${flip ? -1 : 1} 1)">
   <defs><radialGradient id="${gid}" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="${hi}"/><stop offset="0.35" stop-color="${body}"/><stop offset="1" stop-color="${shade(body, -0.35)}"/></radialGradient></defs>
-  <ellipse cx="0" cy="${s * 1.38}" rx="${s * 0.85}" ry="${s * 0.12}" fill="#000" opacity="0.25"/>
-  ${limbs}
+  ${opts.headOnly ? "" : `<ellipse cx="0" cy="${s * 1.38}" rx="${s * 0.85}" ry="${s * 0.12}" fill="#000" opacity="0.25"/>
+  ${limbs}`}
   <path d="${bodyPath(info.shape, s)}" fill="url(#${gid})" stroke="${shade(body, -0.5)}" stroke-width="${s * 0.03}"/>
   ${seeds}
   ${crown}
@@ -116,6 +120,52 @@ export function fruitSvg(c: SketchCharacter, x: number, y: number, size: number,
 </g>`;
 }
 
+const OUTFIT_COLORS = ["#f4f1ea", "#ff7a6b", "#9be15d", "#2b2d42", "#7cc4ff"];
+const COLOR_WORDS: [RegExp, string][] = [
+  [/white|cream|linen|ivory/, "#f4f1ea"],
+  [/coral|salmon|peach/, "#ff7a6b"],
+  [/lime|green|mint/, "#9be15d"],
+  [/black|charcoal/, "#2b2d42"],
+  [/red|crimson|cherry/, "#e8384f"],
+  [/pink|rose/, "#ff8fb1"],
+  [/blue|navy|denim|teal/, "#5b8def"],
+  [/yellow|gold|mustard/, "#ffd84a"],
+  [/purple|lilac|violet/, "#9b6bd6"],
+  [/orange/, "#ff9a3d"],
+];
+
+/** Stable outfit colour per character: from their outfit text, else from their name. */
+export function outfitColor(c: SketchCharacter) {
+  const t = (c.outfit ?? "").toLowerCase();
+  for (const [re, col] of COLOR_WORDS) if (re.test(t)) return col;
+  let h = 0;
+  for (const ch of c.name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return OUTFIT_COLORS[h % OUTFIT_COLORS.length];
+}
+
+/** A human-bodied figure (feet at groundY, total height h) with the fruit as its head. */
+export function humanoidSvg(c: SketchCharacter, x: number, groundY: number, h: number, expr: Expr, flip = false, uid = "h") {
+  const skin = "#e8b48c";
+  const outfit = outfitColor(c);
+  const hip = groundY - h * 0.47;
+  const shoulder = groundY - h * 0.78;
+  const w = h * 0.2; // shoulder half-width
+  const limb = h * 0.055;
+  const arm = expr === "happy" || expr === "surprised" ? -h * 0.06 : h * 0.05;
+  const headSize = h * 0.155; // the fruit head dominates, like the viral style
+  const body = `<g>
+    <ellipse cx="${x}" cy="${groundY + 4}" rx="${w * 1.1}" ry="${h * 0.02}" fill="#000" opacity="0.25"/>
+    <path d="M${x - w * 0.45} ${hip} L${x - w * 0.5} ${groundY - 2}" stroke="${skin}" stroke-width="${limb * 1.2}" stroke-linecap="round"/>
+    <path d="M${x + w * 0.45} ${hip} L${x + w * 0.5} ${groundY - 2}" stroke="${skin}" stroke-width="${limb * 1.2}" stroke-linecap="round"/>
+    <path d="M${x - w} ${shoulder + limb * 0.4} Q${x - w * 1.25} ${(shoulder + hip) / 2} ${x - w * 1.15} ${hip + arm}" stroke="${skin}" stroke-width="${limb}" stroke-linecap="round" fill="none"/>
+    <path d="M${x + w} ${shoulder + limb * 0.4} Q${x + w * 1.25} ${(shoulder + hip) / 2} ${x + w * 1.15} ${hip + arm}" stroke="${skin}" stroke-width="${limb}" stroke-linecap="round" fill="none"/>
+    <rect x="${x - limb * 0.45}" y="${shoulder - h * 0.06}" width="${limb * 0.9}" height="${h * 0.08}" fill="${skin}"/>
+    <path d="M${x - w} ${shoulder} Q${x} ${shoulder - h * 0.03} ${x + w} ${shoulder} L${x + w * 0.62} ${hip + h * 0.02} L${x - w * 0.62} ${hip + h * 0.02} Z" fill="${outfit}" stroke="#000" stroke-opacity="0.2"/>
+    <rect x="${x - w * 0.68}" y="${hip - h * 0.01}" width="${w * 1.36}" height="${h * 0.13}" rx="${h * 0.02}" fill="${shade(outfit, -0.25)}"/>
+  </g>`;
+  return body + fruitSvg(c, x, shoulder - h * 0.17, headSize, expr, flip, uid, { headOnly: true });
+}
+
 function shade(hex: string, amt: number) {
   const n = parseInt(hex.slice(1), 16);
   const f = (v: number) => Math.max(0, Math.min(255, Math.round(amt < 0 ? v * (1 + amt) : v + (255 - v) * amt)));
@@ -127,13 +177,16 @@ function shade(hex: string, amt: number) {
 
 function backdrop(text: string) {
   const t = text.toLowerCase();
-  if (/night|moon|midnight|dark/.test(t)) return { top: "#1b2350", bottom: "#070a1a", ground: "#2a2f55", glow: "#c8d2ff" };
-  if (/rain|grey|storm/.test(t)) return { top: "#6f7f94", bottom: "#2c3442", ground: "#4a5566", glow: "#d6e6ff" };
-  if (/garden|jungle|leaves|grass|park/.test(t)) return { top: "#a8e08a", bottom: "#2f6b3a", ground: "#4f8f3f", glow: "#fff6b0" };
-  if (/fridge|cool blue|frost|snow|winter/.test(t)) return { top: "#d6efff", bottom: "#5d8fb8", ground: "#9cc6e6", glow: "#ffffff" };
-  if (/party|confetti|fairy/.test(t)) return { top: "#5a2a7a", bottom: "#1f0f33", ground: "#7a3a8a", glow: "#ffd1f0" };
-  if (/beach|sea|tropical/.test(t)) return { top: "#7fd3ff", bottom: "#f5d98a", ground: "#f0cf8a", glow: "#fffbe0" };
-  if (/supermarket|fluorescent|aisle/.test(t)) return { top: "#3a4048", bottom: "#15181c", ground: "#555c66", glow: "#e8f4ff" };
+  const has = (words: string) => new RegExp(`\\b(${words})`).test(t);
+  if (has("fire pit")) return { top: "#1a1238", bottom: "#3a1f2b", ground: "#4a2d2a", glow: "#ffb35c" };
+  if (has("night|moon|midnight|dark")) return { top: "#1b2350", bottom: "#070a1a", ground: "#2a2f55", glow: "#c8d2ff" };
+  if (has("villa|pool|resort")) return { top: "#8fd6ff", bottom: "#f4e3c1", ground: "#5cc8e6", glow: "#fffbe0" };
+  if (has("rain|grey|storm")) return { top: "#6f7f94", bottom: "#2c3442", ground: "#4a5566", glow: "#d6e6ff" };
+  if (has("garden|jungle|leaves|grass|park")) return { top: "#a8e08a", bottom: "#2f6b3a", ground: "#4f8f3f", glow: "#fff6b0" };
+  if (has("fridge|cool blue|frost|snow|winter")) return { top: "#d6efff", bottom: "#5d8fb8", ground: "#9cc6e6", glow: "#ffffff" };
+  if (has("party|confetti|fairy")) return { top: "#5a2a7a", bottom: "#1f0f33", ground: "#7a3a8a", glow: "#ffd1f0" };
+  if (has("beach|sea|tropical")) return { top: "#7fd3ff", bottom: "#f5d98a", ground: "#f0cf8a", glow: "#fffbe0" };
+  if (has("supermarket|fluorescent|aisle")) return { top: "#3a4048", bottom: "#15181c", ground: "#555c66", glow: "#e8f4ff" };
   return { top: "#ffd9a0", bottom: "#8a4f2a", ground: "#c98a5a", glow: "#fff1cc" };
 }
 
@@ -172,10 +225,14 @@ export function sceneSvg(sc: SceneSketchInput, W = 540, H = 960, opts: { clean?:
   const baseSize = (chars.length <= 1 ? 120 : chars.length === 2 ? 95 : 75) * zoom;
   const groundY = H * 0.62;
   const xs = chars.length <= 1 ? [W / 2] : chars.length === 2 ? [W * 0.3, W * 0.7] : [W * 0.22, W * 0.5, W * 0.78];
-  const figs = chars
+  const humanoid = chars.some((c) => c.humanoid);
+  const figH = (chars.length <= 1 ? 560 : chars.length === 2 ? 470 : 400) * Math.min(zoom, 1.6);
+  const figs = humanoid
+    ? chars.map((c, i) => humanoidSvg(c, xs[i], groundY + (zoom > 1.3 ? figH * 0.35 : 30), figH, i === 0 ? expr : expr, chars.length > 1 && i === chars.length - 1, `s${sc.index}_${i}`)).join("\n")
+    : chars
     .map((c, i) => fruitSvg(c, xs[i], groundY - baseSize * 1.35 + (chars.length === 3 && i === 1 ? -10 : 0), baseSize * (i === 0 && chars.length > 1 ? 1.05 : 1), i === 0 ? expr : expr === "sad" ? "sad" : expr, chars.length > 1 && i === chars.length - 1, `s${sc.index}_${i}`))
     .join("\n");
-  const labels = zoom > 1.3 ? "" : chars.map((c, i) => `<text x="${xs[i]}" y="${Math.min(groundY + baseSize * 0.55, H * 0.73)}" text-anchor="middle" font-family="Inter" font-size="20" font-weight="700" fill="#fff" opacity="0.85">${esc(c.name)}</text>`).join("");
+  const labels = zoom > 1.3 || humanoid ? "" : chars.map((c, i) => `<text x="${xs[i]}" y="${Math.min(groundY + baseSize * 0.55, H * 0.73)}" text-anchor="middle" font-family="Inter" font-size="20" font-weight="700" fill="#fff" opacity="0.85">${esc(c.name)}</text>`).join("");
   const visLines = wrap(sc.visual, 46, 4);
   const camLines = wrap(`🎥 ${sc.camera}`.replace("🎥 ", "CAMERA: "), 50, 2);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
@@ -207,15 +264,20 @@ export function referenceSvg(c: SketchCharacter & { personality?: string }, W = 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <defs><radialGradient id="rbg" cx="50%" cy="40%" r="70%"><stop offset="0" stop-color="#3a344b"/><stop offset="1" stop-color="#121019"/></radialGradient></defs>
   <rect width="${W}" height="${H}" fill="url(#rbg)"/>
-  ${views.map((v, i) => fruitSvg(c, v.x, H * 0.44, v.size, v.expr, false, `r${i}`)).join("")}
+  ${
+    c.humanoid
+      ? humanoidSvg(c, W * 0.3, H * 0.92, H * 0.78, "happy", false, "r0") +
+        (["surprised", "sad", "determined", "happy"] as Expr[]).map((e, i) => fruitSvg(c, W * (0.66 + (i % 2) * 0.2), H * (0.32 + Math.floor(i / 2) * 0.34), 62, e, false, `r${i + 1}`, { headOnly: true })).join("")
+      : `${views.map((v, i) => fruitSvg(c, v.x, H * 0.44, v.size, v.expr, false, `r${i}`)).join("")}
   ${fruitSvg(c, W * 0.17, H * 0.78, 52, "surprised", false, "r1")}
   ${fruitSvg(c, W * 0.39, H * 0.78, 52, "sad", false, "r2")}
   ${fruitSvg(c, W * 0.61, H * 0.78, 52, "determined", false, "r3")}
-  ${fruitSvg(c, W * 0.83, H * 0.78, 52, "happy", true, "r4")}
+  ${fruitSvg(c, W * 0.83, H * 0.78, 52, "happy", true, "r4")}`
+  }
   <text x="32" y="52" font-family="Inter" font-size="30" font-weight="800" fill="#fff">${esc(c.name)}</text>
   <text x="32" y="82" font-family="Inter" font-size="18" fill="#b7b2c6">${esc(c.fruit)} · reference sketch</text>
   <text x="${W - 32}" y="52" text-anchor="end" font-family="Inter" font-size="15" font-weight="700" fill="#ffd36a">SKETCH · NOT AI</text>
-  <g font-family="Inter" font-size="14" fill="#8a849c" text-anchor="middle">
+  <g font-family="Inter" font-size="14" fill="#8a849c" text-anchor="middle" opacity="${c.humanoid ? 0 : 1}">
     <text x="${W * 0.17}" y="${H - 22}">surprised</text><text x="${W * 0.39}" y="${H - 22}">sad</text><text x="${W * 0.61}" y="${H - 22}">determined</text><text x="${W * 0.83}" y="${H - 22}">happy</text>
   </g>
   ${c.palette.map((p, i) => `<rect x="${W - 32 - (c.palette.length - i) * 34}" y="70" width="26" height="26" rx="6" fill="${p}" stroke="#fff" stroke-opacity="0.3"/>`).join("")}

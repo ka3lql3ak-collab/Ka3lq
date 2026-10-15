@@ -164,3 +164,47 @@ describe("project story generation", () => {
     expect(JSON.stringify(c)).not.toMatch(/viral|guarantee|million views/i);
   });
 });
+
+describe("fruit people style + villa drama", () => {
+  const s = StorySettingsSchema.parse({ idea: "A strawberry, a banana and a watermelon all want to couple up with the new pear in the villa", genre: "drama", visualStyle: "fruit people", characterCount: 4, sceneCount: 6 });
+
+  it("writes a reality-show arc with humanoid fruit-headed characters", () => {
+    const st = composeLocalStory(s);
+    expect(st.characters.map((c) => c.fruit)).toEqual(["strawberry", "banana", "watermelon", "pear"]);
+    for (const c of st.characters) expect(c.appearance).toMatch(/realistic human body.*head is a glossy photoreal/);
+    expect(st.scenes[0].visual).toMatch(/villa/);
+    expect(st.scenes.find((x) => x.beat === "turn")?.caption).toMatch(/Recoupling/);
+    expect(st.scenes.at(-1)?.caption).toMatch(/continued/);
+  });
+
+  it("prompts describe human bodies with fruit heads, keep outfits, and stay non-suggestive", () => {
+    const st = composeLocalStory(s);
+    const cast = st.characters.map((c) => ({ ...c, clothing: /wearing ([^.;]+)/.exec(c.appearance)![1] }));
+    const prompt = buildScenePrompt(st.scenes[2], cast, "fruit people");
+    expect(prompt).toMatch(/realistic human bodies/);
+    expect(prompt).toMatch(/non-suggestive/);
+    for (const c of cast.filter((c) => st.scenes[2].characters.includes(c.name))) expect(prompt).toContain(c.clothing);
+    expect(prompt.length).toBeLessThanOrEqual(2000);
+    expect(prompt).not.toMatch(/\w-$/);
+  });
+
+  it("creates Character Bible entries with human-body fields", async () => {
+    const p = repo.createProject(s);
+    await generateProjectStory(p.id, 0);
+    const cast = repo.projectCharacters(p.id);
+    expect(cast).toHaveLength(4);
+    for (const c of cast) {
+      expect(c.bodyShape).toMatch(/human body/); // no cute library strawberry reused
+      expect(c.limbs).toMatch(/five fingers/);
+    }
+    expect(cast.find((c) => c.fruit === "strawberry")!.clothing).toMatch(/linen shirt/);
+  });
+
+  it("sketches use stable outfit colours and resort backdrops", async () => {
+    const { sceneSvg, outfitColor } = await import("@/lib/media/sketch");
+    expect(outfitColor({ name: "Bobo", fruit: "banana", palette: [], outfit: "a flowing coral sundress" })).toBe("#ff7a6b");
+    expect(outfitColor({ name: "Bobo", fruit: "banana", palette: [] })).toBe(outfitColor({ name: "Bobo", fruit: "banana", palette: [] }));
+    const svg = sceneSvg({ index: 1, beat: "setup", visual: "They share a lounger by the sparkling pool", camera: "medium", emotion: "flirty", caption: "", characters: [{ name: "Bobo", fruit: "banana", palette: ["#ffd84a", "#6b4f1e", "#fff3b0"], humanoid: true }] });
+    expect(svg).toContain("#8fd6ff"); // pool, not "park" from "sparkling"
+  });
+});

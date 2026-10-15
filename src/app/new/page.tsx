@@ -31,6 +31,22 @@ function NewStory() {
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader eyebrow="New story" title="What's the story?" subtitle="Set the shape of your Short. You'll review and edit the full script before anything is animated." />
+      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+        {(
+          [
+            ["🍓 Cute family-film fruit", "Round, big-eyed Pixar-style fruit friends. Wholesome stories.", { visualStyle: "3d family film", genre: "wholesome", characterCount: 2 }, "A lonely strawberry finds a tiny abandoned orange and decides to help it."],
+            ["🍌 Fruit people · villa drama", "Human bodies with realistic fruit heads, luxury resort, reality-show drama (the viral TikTok look).", { visualStyle: "fruit people", genre: "drama", characterCount: 4, dialogueStyle: "witty", narratorStyle: "dramatic trailer" }, "A strawberry, a banana and a watermelon all want to couple up with the new pear in the villa."],
+          ] as const
+        ).map(([name, desc, preset, example]) => {
+          const on = v.visualStyle === preset.visualStyle;
+          return (
+            <button key={name} type="button" onClick={() => setV({ ...v, ...preset, idea: v.idea.trim() ? v.idea : example })} className={`rounded-2xl border p-4 text-left transition ${on ? "border-peach-500 bg-peach-500/10" : "border-ink-700 bg-ink-900/70 hover:border-ink-500"}`}>
+              <div className="font-display font-semibold text-white">{name}</div>
+              <div className="mt-1 text-sm text-ink-400">{desc}</div>
+            </button>
+          );
+        })}
+      </div>
       <Card className="p-6">
         <StorySettingsForm value={v} onChange={setV} caps={status?.capabilities} />
         <ErrorBox error={error} className="mt-4" />

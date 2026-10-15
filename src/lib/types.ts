@@ -2,11 +2,14 @@ import { z } from "zod";
 
 /* ----------------------------- Story settings ----------------------------- */
 
-export const GENRES = ["funny", "emotional", "wholesome", "adventure", "mystery", "twist"] as const;
+export const GENRES = ["funny", "emotional", "wholesome", "adventure", "mystery", "twist", "drama"] as const;
 export const DURATIONS = [15, 30, 45, 60] as const;
 export const DIALOGUE_STYLES = ["minimal", "playful", "heartfelt", "witty", "no-dialogue"] as const;
 export const NARRATOR_STYLES = ["none", "warm storyteller", "playful", "documentary", "dramatic trailer"] as const;
-export const VISUAL_STYLES = ["3d family film", "claymation", "storybook 3d", "glossy toy"] as const;
+export const VISUAL_STYLES = ["3d family film", "fruit people", "claymation", "storybook 3d", "glossy toy"] as const;
+
+/** Styles where characters are human-bodied with fruit heads (the viral "fruit people" look). */
+export const isHumanoidStyle = (style: string) => style === "fruit people";
 
 export const StorySettingsSchema = z.object({
   idea: z.string().trim().min(8, "Describe your idea in at least a few words").max(600),

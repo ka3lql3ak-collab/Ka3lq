@@ -3,7 +3,7 @@ import { composeLocalStory, allocateDurations } from "./local";
 import { anthropicStory, openaiCompatStory, type LlmStory, type ExistingCharacter } from "./llm";
 import { fruitInfo } from "./fruits";
 import { matchSfx } from "../media/sfx-names";
-import { StorySchema, type Story, type StorySettings, type ShortsContent, type CharacterInput } from "../types";
+import { StorySchema, isHumanoidStyle, type Story, type StorySettings, type ShortsContent, type CharacterInput } from "../types";
 import {
   createCharacter,
   linkCharacters,
@@ -84,20 +84,36 @@ const VOICE_PRESETS: CharacterInput["voice"][] = [
 ];
 
 /** Ensure every story character exists in the Character Bible and is linked to the project. */
-export function syncCharacters(projectId: string, story: Story): Character[] {
+export function syncCharacters(projectId: string, story: Story, style = "3d family film"): Character[] {
   const linked = projectCharacters(projectId);
   const library = listCharacters();
   const ids: string[] = [];
   story.characters.forEach((sc, i) => {
     const match =
       linked.find((c) => c.name.toLowerCase() === sc.name.toLowerCase()) ??
-      library.find((c) => c.name.toLowerCase() === sc.name.toLowerCase() && c.fruit.toLowerCase() === sc.fruit.toLowerCase());
+      // Reuse a library character only if it's drawn in the same style (never put a round cartoon fruit in a fruit-people project, or vice versa).
+      library.find((c) => c.name.toLowerCase() === sc.name.toLowerCase() && c.fruit.toLowerCase() === sc.fruit.toLowerCase() && /human/i.test(c.bodyShape) === isHumanoidStyle(style));
     if (match) {
       ids.push(match.id);
       return;
     }
     const info = fruitInfo(sc.fruit);
-    const created = createCharacter({
+    const humanoid = isHumanoidStyle(style);
+    const created = createCharacter(humanoid ? {
+      name: sc.name,
+      fruit: info.key,
+      appearance: sc.appearance,
+      bodyShape: "Adult human body with natural skin and realistic proportions; the head is the fruit",
+      face: `Human-like face sculpted into the ${info.key}: defined eyebrows, small nose, full lips, soft blush`,
+      eyes: "Large, expressive, glossy human-like eyes with long lashes",
+      mouth: "Full, expressive lips; confident smirks and big reactions",
+      limbs: "Natural human arms, hands with five fingers, and legs",
+      clothing: (/wearing ([^.;]+)/.exec(sc.appearance)?.[1] ?? "stylish resort wear").trim(),
+      accessories: "",
+      personality: sc.personality,
+      palette: info.colors.slice(0, 3),
+      voice: VOICE_PRESETS[i % VOICE_PRESETS.length],
+    } : {
       name: sc.name,
       fruit: info.key,
       appearance: sc.appearance,
@@ -160,6 +176,6 @@ export async function generateProjectStory(projectId: string, variation: number)
   const { story, provider, warning } = await writeStory(p.settings, existing, variation);
   updateProject(projectId, { story, title: story.title, content: shortsContent(story, p.settings), scriptApproved: false, status: "script" });
   replaceScenes(projectId, story.scenes);
-  syncCharacters(projectId, story);
+  syncCharacters(projectId, story, p.settings.visualStyle);
   return { provider, warning, scenes: story.scenes.length };
 }

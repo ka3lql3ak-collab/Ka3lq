@@ -31,7 +31,7 @@ export function sketchInput(scene: Scene, cast: Character[]): SceneSketchInput {
     camera: scene.camera,
     emotion: scene.emotion,
     caption: scene.caption,
-    characters: castFor(scene, cast).map((c) => ({ name: c.name, fruit: c.fruit, palette: c.palette })),
+    characters: castFor(scene, cast).map((c) => ({ name: c.name, fruit: c.fruit, palette: c.palette, humanoid: /human/i.test(c.bodyShape), outfit: c.clothing })),
   };
 }
 
@@ -105,8 +105,8 @@ export function requestReference(characterId: string, o: GenOptions & { visualSt
     kind: "image",
     providerId: provider.id,
     model: imageModel(provider, o, s),
-    prompt: buildReferencePrompt(c, (o.visualStyle as never) ?? "3d family film"),
-    params: { aspectRatio: "1:1", widthAndHeight: "1536x1536", reference: { name: c.name, fruit: c.fruit, palette: c.palette } },
+    prompt: buildReferencePrompt(c, (o.visualStyle as never) ?? (/human/i.test(c.bodyShape) ? "fruit people" : "3d family film")),
+    params: { aspectRatio: "1:1", widthAndHeight: "1536x1536", reference: { name: c.name, fruit: c.fruit, palette: c.palette, humanoid: /human/i.test(c.bodyShape), outfit: c.clothing } },
     characterId,
     requestId: o.requestId,
     confirmCost: o.confirmCost,
